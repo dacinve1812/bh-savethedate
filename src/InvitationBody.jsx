@@ -1,6 +1,8 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Image as ImageIcon, Calendar, MapPin, ExternalLink, Mail } from "lucide-react";
+import { Calendar, MapPin, ExternalLink, Mail } from "lucide-react";
+import TopNav from "./TopNav";
+import HeroShowcase from "./HeroShowcase";
 
 export default function InvitationBody({
   tab,
@@ -10,11 +12,13 @@ export default function InvitationBody({
   saveTheDate,
   couple,
   gallery,
+  isInvitationOpen,
 }) {
   return (
     <>
-      <main className="mx-auto max-w-5xl px-4 pb-20 pt-10">
-        <Header onTab={onTabChange} tab={tab} saveTheDate={saveTheDate} couple={couple} />
+      <TopNav onTabChange={onTabChange} tab={tab} />
+      {tab === "home" && isInvitationOpen && <HeroShowcase key="hero" />}
+      <main className="mx-auto max-w-5xl pb-20">
         <AnimatePresence mode="wait">
           {tab === "home" ? (
             <Home key="home" saveTheDate={saveTheDate} />
@@ -45,54 +49,6 @@ export default function InvitationBody({
         )}
       </AnimatePresence>
     </>
-  );
-}
-
-function Header({ onTab, tab, saveTheDate, couple }) {
-  return (
-    <div className="sticky top-0 z-40 mb-8 bg-transparent">
-      <div className="top-bav mx-auto flex max-w-5xl items-center justify-between gap-3 px-2 py-4 rounded-2xl border border-gray-200 bg-white/80 shadow-sm backdrop-blur">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-[#5c6f54] text-white grid place-items-center text-sm font-semibold shadow">
-            {couple.monogram.split(" ").join("")}
-          </div>
-          <div>
-            <div className="text-lg font-semibold tracking-tight">{saveTheDate.names}</div>
-            <div className="text-xs text-gray-500">
-              {saveTheDate.date} • {saveTheDate.venue.split(",")[0]}
-            </div>
-          </div>
-        </div>
-        <nav className="flex gap-2">
-          <TabButton
-            icon={<Calendar size={16} />}
-            label="Home"
-            active={tab === "home"}
-            onClick={() => onTab("home")}
-          />
-            <TabButton
-            icon={<ImageIcon size={16} />}
-            label="Gallery"
-            active={tab === "gallery"}
-            onClick={() => onTab("gallery")}
-          />
-        </nav>
-      </div>
-    </div>
-  );
-}
-
-function TabButton({ icon, label, active, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm transition-all shadow-sm border ${
-        active ? "border-[#5c6f54] bg-[#5c6f54] text-white" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-      }`}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }
 

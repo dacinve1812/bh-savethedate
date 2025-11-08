@@ -50,7 +50,7 @@ export default function WeddingSite() {
 
               <Envelope onOpen={() => setIsOpen(true)} />
 
-              <p className="text-xs text-gray-500">Tap the envelope to open</p>
+              <p className="text-xs text-gray-500">Open me!</p>
             </div>
           </motion.div>
         )}
@@ -64,6 +64,7 @@ export default function WeddingSite() {
         saveTheDate={SAVE_THE_DATE}
         couple={COUPLE}
         gallery={GALLERY}
+        isInvitationOpen={isOpen}
       />
     </div>
   );

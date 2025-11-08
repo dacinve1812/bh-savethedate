@@ -56,16 +56,27 @@ export default function WeddingSite() {
         )}
       </AnimatePresence>
 
-      <InvitationBody
-        tab={tab}
-        onTabChange={setTab}
-        lightbox={lightbox}
-        onLightbox={setLightbox}
-        saveTheDate={SAVE_THE_DATE}
-        couple={COUPLE}
-        gallery={GALLERY}
-        isInvitationOpen={isOpen}
-      />
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            key="invitation-body"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <InvitationBody
+              tab={tab}
+              onTabChange={setTab}
+              lightbox={lightbox}
+              onLightbox={setLightbox}
+              saveTheDate={SAVE_THE_DATE}
+              couple={COUPLE}
+              gallery={GALLERY}
+              isInvitationOpen={isOpen}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

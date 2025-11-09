@@ -43,7 +43,11 @@ export default function HeroShowcase() {
         </div>
 
         <div className="hero-layer hero-delay-4 hero-flower hero-flower--right hero-z-3">
-          <img src={heroMedia.flowers} alt="Bloom arrangement right" />
+          <img src={heroMedia.flowersAlt2} alt="Bloom arrangement right" />
+        </div>
+
+        <div className="hero-layer hero-delay-4 hero-flower hero-flower--right-2 hero-z-3">
+          <img src={heroMedia.flowersAlt} alt="Bloom arrangement right" />
         </div>
 
         <div className="hero-layer hero-delay-4 hero-flower hero-flower--center hero-z-3">
@@ -51,7 +55,7 @@ export default function HeroShowcase() {
         </div>
 
         <div className="hero-layer hero-delay-4 hero-flower hero-flower--center-2 hero-z-6">
-          <img src={heroMedia.flowersAlt} alt="Bloom arrangement center alt" />
+          <img src={heroMedia.flowers} alt="Bloom arrangement center alt" />
         </div>
         <div className="hero-layer hero-delay-4 hero-flower hero-flower--center-3 hero-z-6">
           <img src={heroMedia.flowersAlt2} alt="Bloom arrangement center alt" />

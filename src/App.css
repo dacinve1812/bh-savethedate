@@ -62,9 +62,9 @@
     height: 100%;
     display: block;
     border-radius: 5px;
-    border: 12px solid rgba(251, 251, 251, 0.732);
-    border-bottom: 25px solid rgba(251, 251, 251, 0.732);
-    border-top: 15px solid rgba(251, 251, 251, 0.732);
+    border: 10px solid rgba(251, 251, 251, 0.732);
+    border-bottom: 30px solid rgba(251, 251, 251, 0.732);
+    border-top: 20px solid rgba(251, 251, 251, 0.732);
     background-color: rgba(255, 255, 255, 0.85);
     box-shadow: 5px 10px 10px 0 rgba(0, 0, 0, 0.174);
     object-fit: cover;
@@ -75,14 +75,14 @@
     --hero-final-transform: translate3d(-12%, -15%, 0) rotate(-8deg);
 }
 .hero-picture--right {
-    top: -20%;
+    top: -18%;
     right: 10%;
     --hero-final-transform: translate3d(8%, 0, 0) rotate(7deg);
 }
 .hero-card {
     width: 75%;
-    left: 55%;
-    bottom: 6%;
+    left: 52%;
+    bottom: 5%;
     --hero-final-transform: translate3d(-50%, 0, 0) rotate(-5deg);
     filter: drop-shadow(0 22px 38px rgba(30, 37, 33, 0.2));
 }
@@ -112,24 +112,33 @@
     border-radius: 30px;
 }
 .hero-flower--left {
-    top: 40%;
-    left:20%;
-    --hero-final-transform: translate3d(-40%, -20%, 0) rotate(-50deg);
+    width: 53%;
+    top: 45%;
+    left:27%;
+    --hero-final-transform: translate3d(-40%, -20%, 0) rotate(-10deg);
     /* background-color: red; */
 }
 .hero-flower--left-2 {
-    width: 55%;
+    width: 60%;
     top: 30%;
-    left: -9%;
+    left: -12%;
     --hero-final-transform: translate3d(-40%, -20%, 0) rotate(-35deg);
     /* background-color: red; */
 }
 .hero-flower--right {
+    width: 50%;
     top: 22%;
-    right: 3%;
+    right: 5%;
     --hero-final-transform: translate3d(40%, -8%, 0) rotate(35deg);
     /* background-color: blue; */
 
+}
+.hero-flower--right-2 {
+    width: 80%;
+    top: -30%;
+    right: 20%;
+    --hero-final-transform: translate3d(40%, -8%, 0) rotate(50deg);
+    /* background-color: blue; */
 }
 .hero-flower--center {
     top: -20%;
@@ -138,16 +147,16 @@
     /* background-color: green; */
 }
 .hero-flower--center-2 {
-    width: 63%;
-    top: 64%;
-    left: 43%;
-    --hero-final-transform: translate3d(0%, 0%, 0) rotate(0deg);
+    width: 60%;
+    top: 70%;
+    left: 55%;
+    --hero-final-transform: translate3d(0%, 0%, 0) rotate(150deg);
     /* background-color: green; */
 }   
 .hero-flower--center-3 {
-    width: 43%;
-    top: 90%;
-    left: -10%;
+    width: 55%;
+    top: 80%;
+    left: -15%;
     --hero-final-transform: translate3d(0%, 0%, 0) rotate(-30deg);
     /* background-color: green; */
 }

@@ -1,8 +1,8 @@
 import React from "react";
 
 const heroMedia = {
-  photoOne: "/NP__7180.JPG",
-  photoTwo: "/NP__7045.JPG",
+  photoOne: "/photo1.jpg",
+  photoTwo: "/photo2.jpg",
   card: "/ticket.png",
   envelope: "/envelope_1.png",
   envelopeOpen: "/envelope_open.png",

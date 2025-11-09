@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import envelopeImg from "./assets/envelope.png"; // ảnh envelope nội bộ
+import envelopeImg from "../public/envelope.png"; // ảnh envelope nội bộ
 import InvitationBody from "./InvitationBody";
 import "./App.css";
 

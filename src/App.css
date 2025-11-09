@@ -52,10 +52,14 @@
 .hero-delay-6 { --hero-delay: calc(var(--hero-stagger) * 6); }
 .hero-picture {
     width: 42%;
+    aspect-ratio: 3 / 4;
+    height: auto;
+    transform-origin: center;
     filter: drop-shadow(0 16px 24px rgba(30, 37, 33, 0.18));
 }
 .hero-picture img {
-    width: 95%;
+    width: 100%;
+    height: 100%;
     display: block;
     border-radius: 5px;
     border: 12px solid rgba(251, 251, 251, 0.732);
@@ -63,6 +67,7 @@
     border-top: 15px solid rgba(251, 251, 251, 0.732);
     background-color: rgba(255, 255, 255, 0.85);
     box-shadow: 5px 10px 10px 0 rgba(0, 0, 0, 0.174);
+    object-fit: cover;
 }
 .hero-picture--left {
     top:5%;
@@ -77,7 +82,7 @@
 .hero-card {
     width: 75%;
     left: 55%;
-    bottom: 7%;
+    bottom: 6%;
     --hero-final-transform: translate3d(-50%, 0, 0) rotate(-5deg);
     filter: drop-shadow(0 22px 38px rgba(30, 37, 33, 0.2));
 }

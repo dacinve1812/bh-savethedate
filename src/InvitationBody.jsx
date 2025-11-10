@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, MapPin, ExternalLink, Mail } from "lucide-react";
 import TopNav from "./TopNav";
 import HeroShowcase from "./HeroShowcase";
+import FeatureIntro from "./FeatureIntro";
 
 export default function InvitationBody({
   tab,
@@ -17,7 +18,12 @@ export default function InvitationBody({
   return (
     <>
       <TopNav onTabChange={onTabChange} tab={tab} />
-      {tab === "home" && isInvitationOpen && <HeroShowcase key="hero" />}
+      {tab === "home" && isInvitationOpen && (
+        <>
+          <HeroShowcase key="hero" />
+          <FeatureIntro key="feature-intro" />
+        </>
+      )}
       <main className="mx-auto max-w-5xl pb-20">
         <AnimatePresence mode="wait">
           {tab === "home" ? (
@@ -54,6 +60,8 @@ export default function InvitationBody({
 
 function Home({ saveTheDate }) {
   return (
+
+    // This is content of Save the date
     <motion.section
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -85,6 +93,7 @@ function Home({ saveTheDate }) {
         </div>
       </div>
 
+      {/* This is content of RSVP */}
       <motion.div
         className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
         initial={{ opacity: 0, y: 20 }}
@@ -130,6 +139,7 @@ function Home({ saveTheDate }) {
         </div>
       </motion.div>
 
+{/* This is content of Travel & Notes */}
       <motion.div
         className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
         initial={{ opacity: 0, y: 20 }}

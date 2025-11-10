@@ -10,7 +10,7 @@
 }
 .hero-showcase {
     position: relative;
-    top: -30px;
+    /* top: -30px; */
     height: 100vh;
     display: grid;
     place-items: center;
@@ -50,6 +50,79 @@
 .hero-delay-4 { --hero-delay: calc(var(--hero-stagger) * 4); }
 .hero-delay-5 { --hero-delay: calc(var(--hero-stagger) * 5); }
 .hero-delay-6 { --hero-delay: calc(var(--hero-stagger) * 6); }
+.feature-intro {
+    position: relative;
+    height: 100vh;
+    display: grid;
+    place-items: center;
+    background: center / cover no-repeat var(--feature-intro-desktop, url("/feature-hero-desktop.jpg"));
+    background-position: 43% 35%;
+    color: #f7f4ef;
+    overflow: hidden;
+}
+
+.feature-intro::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    /* background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.55) 100%); */
+}
+.feature-intro__content {
+    position: relative;
+    text-align: center;
+    top: 20%;
+    display: grid;
+    gap: 1.5rem;
+    padding: 0 1.5rem;
+}
+.feature-intro__monogram {
+    font-family: "Nanum Myeongjo", serif;
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+}
+.feature-intro__heading {
+    font-family: "Cormorant Garamond", serif;
+    font-size: clamp(8rem, 9vw, 9rem);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 350;
+    transform: scaleY(1.2);
+}
+.feature-intro__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(45, 45, 45, 0.082) 0%, rgba(52, 52, 52, 0.329) 100%);
+}
+@media (min-width: 1440px) {
+    .feature-intro {
+        background-position: 43% 15%;
+    }
+    .feature-intro__heading {
+        letter-spacing: 0.07em;
+    }
+}
+@media (max-width: 1024px) and (min-width: 768px) {
+
+    .feature-intro__heading {
+        font-size: clamp(6rem, 9vw, 7rem);
+    }
+}
+@media (max-width: 768px) {
+    .feature-intro {
+        height: 80vh;
+        background-image: var(--feature-intro-mobile, url("/feature-hero-desktop.jpg"));
+    }
+    .feature-intro__monogram {
+        letter-spacing: 0.25em;
+    }
+    .feature-intro__heading {
+        font-size: clamp(6rem, 9vw, 7rem);
+        line-height: 1.2;
+        letter-spacing: 0.1em;
+        text-align: end;
+    }
+}
 .hero-picture {
     width: 42%;
     aspect-ratio: 3 / 4;

@@ -123,6 +123,12 @@
         text-align: end;
     }
 }
+@media (max-width: 550px) {
+    .hero-stage{
+        scale: 0.9;
+        top: -5%;
+    }
+}
 .hero-picture {
     width: 42%;
     aspect-ratio: 3 / 4;

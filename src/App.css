@@ -117,7 +117,7 @@
         letter-spacing: 0.25em;
     }
     .feature-intro__heading {
-        font-size: clamp(6rem, 9vw, 7rem);
+        font-size: clamp(5rem, 9vw, 6rem);
         line-height: 1.2;
         letter-spacing: 0.1em;
         text-align: end;

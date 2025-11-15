@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 
 const TABS = [
   { key: "home", label: "Home" },
@@ -8,7 +8,10 @@ const TABS = [
 
 export default function TopNav({ tab, onTabChange }) {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const navRef = useRef(null);
+  const lastScrollY = useRef(0);
+  const { scrollY } = useScroll();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -22,11 +25,36 @@ export default function TopNav({ tab, onTabChange }) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    const previous = lastScrollY.current;
+    
+    if (latest > previous && latest > 100) {
+      // Scrolling down - hide navbar
+      setIsVisible(false);
+    } else if (latest < previous) {
+      // Scrolling up - show navbar
+      setIsVisible(true);
+    }
+    
+    lastScrollY.current = latest;
+  });
+
   return (
-    <div
+    <motion.div
       ref={navRef}
-      className={`sticky top-0 z-40 transition-all duration-300 ${
-        isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-transparent"
+      initial={{ y: 0 }}
+      animate={{ 
+        y: isVisible ? 0 : -100,
+        opacity: isVisible ? 1 : 0
+      }}
+      transition={{
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+        mass: 0.8
+      }}
+      className={`fixed top-0 left-0 right-0 z-40 ${
+        isScrolled ? "bg-white/25 backdrop-blur-sm shadow-sm" : "bg-transparent"
       }`}
     >
       <nav className="mx-auto flex w-full justify-center">
@@ -41,7 +69,7 @@ export default function TopNav({ tab, onTabChange }) {
           ))}
         </div>
       </nav>
-    </div>
+    </motion.div>
   );
 }
 

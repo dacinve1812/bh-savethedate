@@ -6,30 +6,21 @@ import "./App.css";
 
 const SAVE_THE_DATE = {
   heading: "Save the Date",
-  names: "Bao & Hau",
-  date: "Sat • Nov 22, 2025",
-  time: "4:30 PM",
-  venue: "The Conservatory, Atlanta Botanical Garden",
-  address: "1345 Piedmont Ave NE, Atlanta, GA",
-  googleMaps: "https://maps.google.com/",
-  note: "Formal attire • Reception to follow",
-  rsvpLink: "https://forms.gle/your-form",
-  email: "baonguyen@example.com",
 };
 
-const COUPLE = {
-  monogram: "B ❤ H",
-  tagline: "A little love story in sage & ivory",
-};
+// const COUPLE = {
+//   monogram: "B ❤ H",
+//   tagline: "A little love story in sage & ivory",
+// };
 
-const GALLERY = [
-  "https://images.unsplash.com/photo-1525286116112-b59af11adad1",
-  "https://images.unsplash.com/photo-1520975693410-001d8a8e3f1b",
-  "https://images.unsplash.com/photo-1519741497674-611481863552",
-  "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
-  "https://images.unsplash.com/photo-1520975600649-49b5a2c7ee08",
-  "https://images.unsplash.com/photo-1520975963690-7b3d9e9d6d2a",
-];
+// const GALLERY = [
+//   "https://images.unsplash.com/photo-1525286116112-b59af11adad1",
+//   "https://images.unsplash.com/photo-1520975693410-001d8a8e3f1b",
+//   "https://images.unsplash.com/photo-1519741497674-611481863552",
+//   "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
+//   "https://images.unsplash.com/photo-1520975600649-49b5a2c7ee08",
+//   "https://images.unsplash.com/photo-1520975963690-7b3d9e9d6d2a",
+// ];
 
 export default function WeddingSite() {
   const [isOpen, setIsOpen] = useState(false);
@@ -50,7 +41,25 @@ export default function WeddingSite() {
 
               <Envelope onOpen={() => setIsOpen(true)} />
 
-              <p className="text-xs text-gray-500">Open me!</p>
+              <motion.p 
+                className="open-me-text"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ 
+                  opacity: 1, 
+                  y: [0, -6, 0]
+                }}
+                transition={{ 
+                  opacity: { duration: 0.6, delay: 0.4 },
+                  y: {
+                    duration: 1.5,
+                    repeat: Infinity,
+                    delay: 0.8,
+                    ease: "easeInOut"
+                  }
+                }}
+              >
+                Open me!
+              </motion.p>
             </div>
           </motion.div>
         )}
@@ -70,8 +79,8 @@ export default function WeddingSite() {
               lightbox={lightbox}
               onLightbox={setLightbox}
               saveTheDate={SAVE_THE_DATE}
-              couple={COUPLE}
-              gallery={GALLERY}
+              // couple={COUPLE}
+              // gallery={GALLERY}
               isInvitationOpen={isOpen}
             />
           </motion.div>
@@ -93,7 +102,38 @@ function Envelope({ onOpen }) {
       className="relative grid place-items-center"
       aria-label="Open invitation"
     >
-      <img src={envelopeImg} alt="Envelope" className="w-[520px] max-w-[80vw] drop-shadow-xl rounded-2xl" />
+      <motion.img 
+        src={envelopeImg} 
+        alt="Envelope" 
+        className="w-[520px] max-w-[80vw] drop-shadow-xl rounded-2xl"
+        animate={{
+          y: [0, -8, 0],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+      <motion.img
+        src="/click me.gif"
+        alt="Click me"
+        className="absolute w-[80px] max-w-[15vw] pointer-events-none"
+        style={{ top: '58%', left: '45%' }}
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ 
+          opacity: 1, 
+          scale: [1, 1.1, 1],
+        }}
+        transition={{
+          opacity: { duration: 0.5, delay: 0.3 },
+          scale: {
+            duration: 1.5,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }
+        }}
+      />
     </button>
   );
 }

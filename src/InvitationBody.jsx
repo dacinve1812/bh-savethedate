@@ -4,6 +4,9 @@ import { Calendar, MapPin, ExternalLink, Mail } from "lucide-react";
 import TopNav from "./TopNav";
 import HeroShowcase from "./HeroShowcase";
 import FeatureIntro from "./FeatureIntro";
+import ChanceEncounter from "./ChanceEncounter";
+import Schedule from "./Schedule";
+import FormalInvitation from "./FormalInvitation";
 
 export default function InvitationBody({
   tab,
@@ -22,9 +25,12 @@ export default function InvitationBody({
         <>
           <HeroShowcase key="hero" />
           <FeatureIntro key="feature-intro" />
+          <ChanceEncounter key="chance" />
+          <Schedule key="schedule" />
+          <FormalInvitation key="formal-invitation" />
         </>
       )}
-      <main className="mx-auto max-w-5xl pb-20">
+      <main className="mx-auto max-w-5xl">
         <AnimatePresence mode="wait">
           {tab === "home" ? (
             <Home key="home" saveTheDate={saveTheDate} />
@@ -68,7 +74,7 @@ function Home({ saveTheDate }) {
       exit={{ opacity: 0, y: 10 }}
       className="grid gap-6 grid-cols-1 section-home"
     >
-      <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      {/* <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div
           className="h-64 md:h-80 w-full bg-center bg-cover [background-attachment:fixed]"
           style={{
@@ -91,10 +97,10 @@ function Home({ saveTheDate }) {
             </div>
           </motion.div>
         </div>
-      </div>
+      </div> */}
 
       {/* This is content of RSVP */}
-      <motion.div
+      {/* <motion.div
         className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -137,10 +143,10 @@ function Home({ saveTheDate }) {
             <Mail size={16} /> Contact us
           </a>
         </div>
-      </motion.div>
+      </motion.div> */}
 
 {/* This is content of Travel & Notes */}
-      <motion.div
+      {/* <motion.div
         className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -156,7 +162,7 @@ function Home({ saveTheDate }) {
         <div className="mt-6 rounded-xl bg-[#e7ece4] p-4 text-sm text-[#253126]">
           Tip: Save our date to your calendar from the RSVP confirmation screen.
         </div>
-      </motion.div>
+      </motion.div> */}
     </motion.section>
   );
 }
@@ -168,21 +174,19 @@ function Gallery({ gallery, onOpen }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 10 }}
     >
-      <div className="mb-4 text-sm text-gray-600">Click any photo to view larger.</div>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-        {gallery.map((src, index) => (
-          <button
-            key={index}
-            className="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
-            onClick={() => onOpen(src)}
-          >
-            <img
-              src={`${src}?auto=format&fit=crop&w=900&q=80`}
-              alt={`Gallery ${index + 1}`}
-              className="h-44 w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          </button>
-        ))}
+      <div className="gallery__message">
+        <motion.img
+          src="/commingsoon.png"
+          alt="Coming soon"
+          className="gallery__image"
+          initial={{ opacity: 0, scale: 1, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{
+            duration: 0.6,
+            ease: [0.2, 0.1, 0.25, 0.5],
+            delay: 0
+          }}
+        />
       </div>
     </motion.section>
   );

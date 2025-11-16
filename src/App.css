@@ -415,7 +415,7 @@
     }
 
 }
-@media (max-width: 380px) {
+@media (max-width: 390px) {
     .chance-encounter__text p {
         font-size: clamp(0.8rem, 1.7vw, 1.25rem);
         line-height: 1.6;
@@ -423,11 +423,12 @@
 }
 .fontchange{
     font-family:  "Mrs Saint Delafield", serif;
-    font-size: clamp(1.5rem, 3vw, 2.3rem);
+    font-size: clamp(1.6rem, 3vw, 2.3rem);
     font-weight: 200;
     color: #974e06;
     line-height: 1.2;
     letter-spacing: 0.02em;
+    white-space: nowrap;
 }
 
 

@@ -52,7 +52,21 @@ export default function FormalInvitation() {
                 ease: [0.25, 0.1, 0.25, 1]
               }}
             >
-              5.30.2026
+              05.30.2026
+            </motion.p>
+            <motion.p 
+              className="formal-invitation__p3"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false }}
+              transition={{
+                duration: 0.6,
+                delay: 0.5,
+                ease: [0.25, 0.1, 0.25, 1]
+              }}
+            >
+              <img src="/location.gif" alt="Map" className="formal-invitation__map" loading="lazy" />
+              <span>Ho Chi Minh City - Viet Nam</span>
             </motion.p>
           </motion.div>
           <motion.p 
@@ -62,7 +76,7 @@ export default function FormalInvitation() {
             viewport={{ once: false }}
             transition={{
               duration: 0.7,
-              delay: 0.5,
+              delay: 0.6,
               ease: [0.25, 0.1, 0.25, 1]
             }}
           >

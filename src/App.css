@@ -31,9 +31,9 @@
     place-items: center;
     overflow: hidden;
     background: linear-gradient(180deg, rgba(247, 243, 239, 0.15) 0%, rgba(238, 237, 231, 0.6) 100%);
-    --hero-fade-duration: 1.1s;
+    --hero-fade-duration: 1.2s;
     --hero-float-duration: 5.4s;
-    --hero-stagger: 0.18s;
+    --hero-stagger: 0.23s;
 }
 .hero-stage {
     position: relative;
@@ -636,11 +636,14 @@ display: block;
     font-size: clamp(1rem, 3vw, 2.3rem);
     letter-spacing: 0.15em;
     color: #1c2321;
-    font-weight: 300;
+    font-weight: 400;
 }
 .formal-invitation__p2{
     font-family: "Spectral", serif;
-    font-weight: 200;
+    font-weight: 250;          /* place icon next to text */
+    align-items: center;
+    gap: 0.5rem;                    /* space between icon and text */
+    justify-content: center;
 }
 
 .formal-invitation__image {
@@ -659,7 +662,22 @@ display: block;
     object-fit: contain;
     display: block;
 }
-
+.formal-invitation__map {
+    width: 1.3rem;
+    height: 1.2rem;
+    object-fit: contain;
+    display: inline-block;
+    padding-bottom: 0.2rem;
+    margin-left: -0.5rem;
+}
+.formal-invitation__p3{
+    font-family: "Spectral", serif;
+    font-weight: 200;          /* place icon next to text */
+    align-items: center;
+    gap: 1rem;                    /* space between icon and text */
+    justify-content: center;
+    margin-top: 0.5rem;
+}
 @media (max-width: 768px) {
     .formal-invitation {
         height: 100dvh;

@@ -335,7 +335,7 @@
 }
 .chance-encounter__layer--map {
     z-index: 1;
-    width: 85%;
+    width: 80%;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
@@ -380,6 +380,7 @@
     .chance-encounter {
         flex-direction: column;
         height: 100vh;
+        gap: 2.5rem;
     }
     .chance-encounter__text {
         max-width: 550px;
@@ -403,13 +404,14 @@
         height: auto;
         padding: clamp(4rem, 12vw, 5rem) clamp(1.5rem, 10vw, 3rem);
         min-height: 850px;
+        gap: 1.5rem;
     }
     .chance-encounter__layer--map{
-        width: 90%;
+        width: 80%;
     }
     .chance-encounter__visual {
         width: min(75vw, 420px);
-        height: min(90vw, 460px);
+        /* height: min(90vw, 460px); */
     }
 
 }

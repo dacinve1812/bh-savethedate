@@ -15,7 +15,7 @@ export default function ChanceEncounter() {
         }}
       >
         <motion.h2 
-          className="chance-encounter__title"
+          className="chance-encounter__title mb-5"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false }}

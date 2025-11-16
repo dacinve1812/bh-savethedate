@@ -11,7 +11,7 @@ const EVENTS = [
 
 export default function Schedule() {
   return (
-    <section className="schedule" aria-labelledby="schedule-heading">
+    <section id="schedule" className="schedule" aria-labelledby="schedule-heading">
       <div className="schedule__wrapper">
         <motion.div 
           className="schedule__container"

@@ -21,7 +21,7 @@ export default function ChanceEncounter() {
           viewport={{ once: false }}
           transition={{
             duration: 0.7,
-            delay: 0.1,
+            delay: 0.15,
             ease: [0.25, 0.1, 0.25, 1]
           }}
         >
@@ -42,21 +42,45 @@ export default function ChanceEncounter() {
             ease: [0.25, 0.1, 0.25, 1]
           }}
         >
-          After years of laughter, adventures, and countless shared memories, we&apos;re finally taking the next step in our journey together.<br>
-        </br>This day marks not just a celebration of love, but the beginning of a lifetime filled with new dreams, new chapters, and endless moments together.
-        </motion.p>      
+          After <span className="fontchange"> years </span> of laughter, adventures, and countless
+          shared memories, we&apos;re <span className="fontchange"> finally </span> taking the next step in our journey together.
+        </motion.p>
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false }}
+          transition={{
+            duration: 0.7,
+            delay: 0.2,
+            ease: [0.25, 0.1, 0.25, 1]
+          }}
+        >
+            This day marks not just a celebration of love,
+         but the beginning of a <span className="fontchange">lifetime </span> filled with new dreams, new chapters, and endless moments together.
+        </motion.p>   
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false }}
+          transition={{
+            duration: 0.7,
+            delay: 0.25,
+            ease: [0.25, 0.1, 0.25, 1]
+          }}
+        >
+           We&apos;re so grateful for the love and support of our family and friends who have been part of <span className="fontchange">our story </span> from the start.
+        </motion.p>         
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false }}
           transition={{
             duration: 0.6,
-            delay: 0.25,
+            delay: 0.3,
             ease: [0.25, 0.1, 0.25, 1]
           }}
         >
-          We&apos;re so grateful for the love and support of our family and friends who have been part of our story from the start.<br>      
-        </br>Your presence means the world to us, and we can&apos;t wait to celebrate this special day surrounded by those we love most.
+         Your<span className="fontchange"> presence </span> means the world to us, and we can&apos;t wait to celebrate this special day surrounded by those  <span className="fontchange"> we love most.</span>
         </motion.p>
       </motion.div>
 

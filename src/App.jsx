@@ -37,26 +37,12 @@ export default function WeddingSite() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 grid place-items-center bg-[#f6f7ef]"
           >
-            <div className="flex flex-col items-center gap-6">
+            <div className="flex flex-col items-center">
 
               <Envelope onOpen={() => setIsOpen(true)} />
 
               <motion.p 
                 className="open-me-text"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ 
-                  opacity: 1, 
-                  y: [0, -6, 0]
-                }}
-                transition={{ 
-                  opacity: { duration: 0.6, delay: 0.4 },
-                  y: {
-                    duration: 1.5,
-                    repeat: Infinity,
-                    delay: 0.8,
-                    ease: "easeInOut"
-                  }
-                }}
               >
                 Open me!
               </motion.p>
@@ -107,7 +93,7 @@ function Envelope({ onOpen }) {
         alt="Envelope" 
         className="w-[520px] max-w-[80vw] drop-shadow-xl rounded-2xl"
         animate={{
-          y: [0, -8, 0],
+          y: [0, -25, 0],
         }}
         transition={{
           duration: 2,

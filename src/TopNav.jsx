@@ -9,11 +9,15 @@ const TABS = [
 export default function TopNav({ tab, onTabChange }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const [canShow, setCanShow] = useState(false); // delay initial reveal
   const navRef = useRef(null);
   const lastScrollY = useRef(0);
   const { scrollY } = useScroll();
 
   useEffect(() => {
+    // Delay showing the navbar to allow HeroShowcase animations (~2s) to play
+    const t = setTimeout(() => setCanShow(true), 2000);
+
     const handleScroll = () => {
       const threshold = navRef.current?.offsetHeight ?? 0;
       setIsScrolled(window.scrollY > threshold);
@@ -22,7 +26,10 @@ export default function TopNav({ tab, onTabChange }) {
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
 
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
@@ -39,13 +46,56 @@ export default function TopNav({ tab, onTabChange }) {
     lastScrollY.current = latest;
   });
 
+  const scrollToSchedule = (duration = 800) => {
+    const scheduleSection = document.getElementById("schedule");
+    if (!scheduleSection) return;
+
+    const startPosition = window.pageYOffset;
+    const targetPosition = scheduleSection.offsetTop; // Scroll đến đúng start của section
+    const distance = targetPosition - startPosition;
+    let startTime = null;
+
+    const easeInOutCubic = (t) => {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    };
+
+    const animation = (currentTime) => {
+      if (startTime === null) startTime = currentTime;
+      const timeElapsed = currentTime - startTime;
+      const progress = Math.min(timeElapsed / duration, 1);
+      const ease = easeInOutCubic(progress);
+
+      window.scrollTo(0, startPosition + distance * ease);
+
+      if (timeElapsed < duration) {
+        requestAnimationFrame(animation);
+      }
+    };
+
+    requestAnimationFrame(animation);
+  };
+
+  const handleTimelineClick = () => {
+    // Nếu đang ở tab Gallery, chuyển về Home trước
+    if (tab !== "home") {
+      onTabChange("home");
+      // Đợi component render xong rồi mới scroll
+      setTimeout(() => {
+        scrollToSchedule(1500); // 800ms duration
+      }, 100);
+    } else {
+      // Nếu đã ở Home, scroll ngay
+      scrollToSchedule(1500); // 800ms duration
+    }
+  };
+
   return (
     <motion.div
       ref={navRef}
-      initial={{ y: 0 }}
+      initial={{ y: -100, opacity: 0 }}
       animate={{ 
-        y: isVisible ? 0 : -100,
-        opacity: isVisible ? 1 : 0
+        y: canShow ? (isVisible ? 0 : -100) : -100,
+        opacity: canShow ? (isVisible ? 1 : 0) : 0
       }}
       transition={{
         type: "spring",
@@ -54,7 +104,7 @@ export default function TopNav({ tab, onTabChange }) {
         mass: 0.8
       }}
       className={`fixed top-0 left-0 right-0 z-40 ${
-        isScrolled ? "bg-white/25 backdrop-blur-sm shadow-sm" : "bg-transparent"
+        isScrolled ? "bg-white/35 backdrop-blur-sm shadow-sm" : "bg-transparent"
       }`}
     >
       <nav className="mx-auto flex w-full justify-center">
@@ -67,6 +117,11 @@ export default function TopNav({ tab, onTabChange }) {
               onClick={() => onTabChange(key)}
             />
           ))}
+          <TabButton
+            label="Timeline"
+            active={false}
+            onClick={handleTimelineClick}
+          />
         </div>
       </nav>
     </motion.div>
@@ -78,7 +133,7 @@ function TabButton({ label, active, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`relative pb-2 text-sm font-medium tracking-wide text-gray-600 transition-colors ${
+      className={`topnav__tab relative pb-2 text-sm font-medium tracking-wide text-gray-600 transition-colors ${
         active ? "text-[#253126]" : "hover:text-[#253126]"
       }`}
     >
@@ -86,7 +141,7 @@ function TabButton({ label, active, onClick }) {
       {active && (
         <motion.span
           layoutId="topnav-underline"
-          className="absolute inset-x-0 -bottom-1 h-0.5 rounded-full bg-[#5c6f54]"
+          className="absolute inset-x-0 top-6 h-0.5 bg-[#5c6f54]"
         />
       )}
     </button>

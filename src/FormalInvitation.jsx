@@ -39,7 +39,7 @@ export default function FormalInvitation() {
                 ease: [0.25, 0.1, 0.25, 1]
               }}
             >
-              BAO and HAU
+              BAO<span className="fontchange px-2">and</span> HAU
             </motion.p>
             <motion.p 
               className="formal-invitation__p2"

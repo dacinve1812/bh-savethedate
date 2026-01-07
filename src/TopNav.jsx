@@ -4,6 +4,7 @@ import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 const TABS = [
   { key: "home", label: "Home" },
   { key: "gallery", label: "Gallery" },
+  { key: "rsvp", label: "RSVP" },
 ];
 
 export default function TopNav({ tab, onTabChange }) {

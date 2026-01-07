@@ -1,7 +1,9 @@
 import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import envelopeImg from "../public/envelope.png"; // ảnh envelope nội bộ
 import InvitationBody from "./InvitationBody";
+import RSVPPage from "./RSVPPage";
 import "./App.css";
 
 const SAVE_THE_DATE = {
@@ -23,6 +25,17 @@ const SAVE_THE_DATE = {
 // ];
 
 export default function WeddingSite() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/rsvp" element={<RSVPPage />} />
+        <Route path="*" element={<HomePage />} />
+      </Routes>
+    </Router>
+  );
+}
+
+function HomePage() {
   const [isOpen, setIsOpen] = useState(false);
   const [tab, setTab] = useState("home");
   const [lightbox, setLightbox] = useState(null);

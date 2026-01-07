@@ -1,0 +1,336 @@
+.rsvp-page {
+  min-height: 100vh;
+  background: #f6f7ef;
+  font-family: "Spectral", serif;
+}
+
+/* Header */
+.rsvp-page__header {
+  background: transparent;
+  padding: 1.5rem 2rem;
+}
+
+.rsvp-page__header-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.rsvp-page__logo {
+  font-family: "Cormorant Garamond", serif;
+  font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+  font-weight: 500;
+  color: #1c2321;
+  letter-spacing: 0.1em;
+  transition: opacity 0.3s ease;
+}
+
+.rsvp-page__logo:hover {
+  opacity: 0.7;
+}
+
+/* Typeahead */
+.rsvp-page__typeahead {
+  position: relative;
+}
+
+.rsvp-page__suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #ffffff;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  max-height: 220px;
+  overflow: auto;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+}
+
+.rsvp-page__suggestion {
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+}
+
+.rsvp-page__suggestion:hover {
+  background: #f5f6f4;
+}
+
+/* Hero Section */
+.rsvp-page__hero {
+  position: relative;
+  width: 100%;
+  height: 80vh;
+  min-height: 500px;
+  overflow: hidden;
+}
+
+.rsvp-page__hero-image {
+  width: 100%;
+  height: 100%;
+  background: center / cover no-repeat url("/feature-hero-desktop.jpg");
+  background-position: 43% 35%;
+  position: relative;
+}
+
+.rsvp-page__hero-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+}
+
+.rsvp-page__hero-title {
+  font-family: "Cormorant Garamond", serif;
+  font-size: clamp(4rem, 8vw, 7rem);
+  font-weight: 400;
+  color: #ffffff;
+  letter-spacing: 0.1em;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+}
+
+.rsvp-page__hero-subtitle {
+  font-family: "Spectral", serif;
+  font-size: clamp(0.9rem, 1.8vw, 1.2rem);
+  font-weight: 300;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+  max-width: 600px;
+}
+
+/* Wedding Title Section */
+.rsvp-page__title-section {
+  background: #ffffff;
+  padding: 3rem 2rem;
+}
+
+.rsvp-page__wedding-title {
+  font-family: "Cormorant Garamond", serif;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  font-weight: 400;
+  color: #1c2321;
+  letter-spacing: 0.1em;
+  max-width: 1440px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* Form Section */
+.rsvp-page__form-section {
+  background: #ffffff;
+  padding: 3rem 2rem 5rem;
+}
+
+.rsvp-page__form {
+  max-width: 800px;
+  margin: 0 auto;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  padding: 2.5rem;
+  background: #ffffff;
+}
+
+.rsvp-page__form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.rsvp-page__form-group {
+  margin-bottom: 1.5rem;
+}
+
+.rsvp-page__label {
+  display: block;
+  font-family: "Spectral", serif;
+  font-size: clamp(0.9rem, 1.5vw, 1rem);
+  font-weight: 400;
+  color: #1c2321;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.02em;
+}
+
+.rsvp-page__required {
+  color: #666;
+  font-weight: 300;
+}
+
+.rsvp-page__input,
+.rsvp-page__textarea,
+.rsvp-page__select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  font-family: "Spectral", serif;
+  font-size: clamp(0.9rem, 1.5vw, 1rem);
+  color: #1c2321;
+  background: #ffffff;
+  transition: border-color 0.3s ease;
+}
+
+.rsvp-page__select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231c2321' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 12px;
+  padding-right: 2.5rem;
+}
+
+.rsvp-page__select:focus {
+  outline: none;
+  border-color: #5c6f54;
+}
+
+.rsvp-page__input:focus,
+.rsvp-page__textarea:focus {
+  outline: none;
+  border-color: #5c6f54;
+}
+
+.rsvp-page__input::placeholder,
+.rsvp-page__textarea::placeholder {
+  color: #999;
+  opacity: 0.6;
+}
+
+.rsvp-page__textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.rsvp-page__radio-group {
+  display: flex;
+  gap: 2rem;
+  margin-top: 0.5rem;
+}
+
+.rsvp-page__radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: "Spectral", serif;
+  font-size: clamp(0.9rem, 1.5vw, 1rem);
+  color: #1c2321;
+  cursor: pointer;
+}
+
+.rsvp-page__radio {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #5c6f54;
+}
+
+.rsvp-page__submit-button {
+  width: 100%;
+  padding: 1rem 2rem;
+  background: #1c2321;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-family: "Spectral", serif;
+  font-size: clamp(1rem, 1.8vw, 1.2rem);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-top: 1rem;
+}
+
+.rsvp-page__submit-button:hover {
+  background: #2d3a2f;
+}
+
+.rsvp-page__submit-button:active {
+  transform: scale(0.98);
+}
+
+.rsvp-page__submit-button:disabled {
+  background: #999;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.rsvp-page__submit-button:disabled:hover {
+  background: #999;
+}
+
+.rsvp-page__message {
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-family: "Spectral", serif;
+  font-size: clamp(0.9rem, 1.5vw, 1rem);
+  text-align: center;
+}
+
+.rsvp-page__message--success {
+  background: #e7f5e7;
+  color: #2d5a2d;
+  border: 1px solid #4caf50;
+}
+
+.rsvp-page__message--error {
+  background: #ffe7e7;
+  color: #8b2d2d;
+  border: 1px solid #f44336;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .rsvp-page__header {
+    padding: 1rem 1.5rem;
+  }
+
+  .rsvp-page__hero {
+    height: 60vh;
+    min-height: 400px;
+  }
+
+  .rsvp-page__form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .rsvp-page__form {
+    padding: 1.5rem;
+  }
+
+  .rsvp-page__title-section {
+    padding: 2rem 1.5rem;
+  }
+
+  .rsvp-page__form-section {
+    padding: 0rem 1.5rem 4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .rsvp-page__hero {
+    height: 50vh;
+    min-height: 350px;
+  }
+
+  .rsvp-page__form {
+    padding: 1rem;
+  }
+}
+

@@ -7,6 +7,8 @@ import FeatureIntro from "./FeatureIntro";
 import ChanceEncounter from "./ChanceEncounter";
 import Schedule from "./Schedule";
 import FormalInvitation from "./FormalInvitation";
+import RSVP from "./RSVP";
+import RSVPPage from "./RSVPPage";
 
 export default function InvitationBody({
   tab,
@@ -18,6 +20,23 @@ export default function InvitationBody({
   gallery,
   isInvitationOpen,
 }) {
+  // Update URL hash when tab changes
+  React.useEffect(() => {
+    if (tab && tab !== "home") {
+      window.location.hash = `#${tab}`;
+    } else {
+      window.location.hash = "";
+    }
+  }, [tab]);
+
+  // Read hash on mount
+  React.useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash && ["gallery", "rsvp"].includes(hash)) {
+      onTabChange(hash);
+    }
+  }, []);
+
   return (
     <>
       <TopNav onTabChange={onTabChange} tab={tab} />
@@ -28,15 +47,18 @@ export default function InvitationBody({
           <ChanceEncounter key="chance" />
           <Schedule key="schedule" />
           <FormalInvitation key="formal-invitation" />
+          <RSVP key="rsvp" onRSVPClick={() => onTabChange("rsvp")} />
         </>
       )}
-      <main className="mx-auto max-w-5xl">
+      <main className="mx-auto">
         <AnimatePresence mode="wait">
           {tab === "home" ? (
             <Home key="home" saveTheDate={saveTheDate} />
-          ) : (
+          ) : tab === "gallery" ? (
             <Gallery key="gallery" gallery={gallery} onOpen={onLightbox} />
-          )}
+          ) : tab === "rsvp" ? (
+            <RSVPPage key="rsvp" showHeader={false} />
+          ) : null}
         </AnimatePresence>
       </main>
 

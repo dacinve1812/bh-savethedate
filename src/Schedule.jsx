@@ -43,7 +43,7 @@ export default function Schedule() {
       EVENTS.map(e => `${e.time} - ${e.title}`).join('\n'),
     location: "",
     startDate: WEDDING_DATE,
-    startTime: "7:00 PM",
+    startTime: "7:00 AM",
     endTime: "11:00 PM",
     allDay: false
   });

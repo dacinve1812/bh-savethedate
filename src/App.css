@@ -433,21 +433,132 @@
 }
 
 
-.gallery__message {
-margin:auto;
-text-align: center;
-height: 100vh;
-display: flex;
-top: 40%;
-align-items: center;
-justify-content: center;
+/* Gallery */
+.gallery {
+    min-height: 100vh;
+    background: #f6f7ef;
+    padding: clamp(6rem, 10vw, 8rem) clamp(1.5rem, 5vw, 4rem) clamp(4rem, 8vw, 6rem);
 }
+
+.gallery__header {
+    text-align: center;
+    margin-bottom: clamp(3rem, 6vw, 5rem);
+}
+
+.gallery__eyebrow {
+    font-family: "Cormorant Garamond", serif;
+    font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #5c6f54;
+    margin: 0 0 0.5rem;
+}
+
+.gallery__title {
+    font-family: "Spectral", serif;
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #1c2321;
+    margin: 0;
+}
+
+.gallery__container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.gallery__masonry {
+    column-count: 3;
+    column-gap: clamp(1rem, 2vw, 1.5rem);
+    column-fill: balance;
+}
+
+.gallery__item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: inline-block;
+    width: 100%;
+    margin-bottom: clamp(1rem, 2vw, 1.5rem);
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+.gallery__item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+}
+
+.gallery__image-wrapper {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
 .gallery__image {
-max-width: min(90vw, 600px);
-width: 100%;
-height: auto;
-object-fit: contain;
-display: block;
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: transform 0.5s ease;
+    vertical-align: bottom;
+}
+
+
+
+@media (max-width: 1024px) {
+    .gallery__masonry {
+        column-count: 3;
+        column-gap: clamp(0.875rem, 1.8vw, 1.25rem);
+    }
+    
+    .gallery__item {
+        margin-bottom: clamp(0.875rem, 1.8vw, 1.25rem);
+    }
+}
+
+@media (max-width: 768px) {
+    .gallery {
+        padding: clamp(5rem, 8vw, 6rem) clamp(1rem, 4vw, 2rem) clamp(3rem, 6vw, 4rem);
+    }
+    
+    .gallery__masonry {
+        column-count: 2;
+        column-gap: clamp(0.75rem, 1.5vw, 1rem);
+    }
+    
+    .gallery__item {
+        margin-bottom: clamp(0.75rem, 1.5vw, 1rem);
+    }
+}
+
+@media (max-width: 480px) {
+    .gallery__masonry {
+        column-count: 1;
+        column-gap: 0.75rem;
+    }
+    
+    .gallery__item {
+        margin-bottom: 0.75rem;
+    }
+}
+
+/* Legacy gallery styles (for coming soon) */
+.gallery__message {
+    margin: auto;
+    text-align: center;
+    height: 100vh;
+    display: flex;
+    top: 40%;
+    align-items: center;
+    justify-content: center;
 }
 
 .schedule {
@@ -1114,5 +1225,82 @@ display: block;
     }
     .formal-invitation__content {
         gap: clamp(1.5rem, 4vw, 2rem);
+    }
+}
+
+/* Lightbox Navigation Styles */
+.gallery-lightbox-container {
+    position: relative;
+}
+
+.gallery-lightbox-nav-btn,
+.gallery-lightbox-close-btn,
+.gallery-lightbox-download-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.gallery-lightbox-nav-btn:hover,
+.gallery-lightbox-close-btn:hover,
+.gallery-lightbox-download-btn:hover {
+    opacity: 0.8;
+}
+
+/* Responsive: Trên mobile, đặt các nút navigation lên trên ảnh */
+@media (max-width: 768px) {
+    .gallery-lightbox-container {
+        gap: 0;
+        position: relative;
+    }
+    
+    .gallery-lightbox-nav-btn--prev {
+        position: absolute !important;
+        left: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    
+    .gallery-lightbox-nav-btn--next {
+        position: absolute !important;
+        right: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    
+    .gallery-lightbox-nav-btn svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .gallery-lightbox-close-btn {
+        top: 0.5rem;
+        right: 0.5rem;
+        padding: 0.375rem;
+    }
+    
+    .gallery-lightbox-close-btn svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .gallery-lightbox-download-btn {
+        bottom: 0.5rem;
+        right: 0.5rem;
+        padding: 0.375rem;
+    }
+    
+    .gallery-lightbox-download-btn svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    /* Đảm bảo download button không bị overlap với close button trên mobile */
+    .gallery-lightbox-close-btn {
+        z-index: 11;
+    }
+    
+    .gallery-lightbox-download-btn {
+        z-index: 10;
     }
 }

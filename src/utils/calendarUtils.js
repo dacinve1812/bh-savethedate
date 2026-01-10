@@ -105,6 +105,8 @@ export function generateCalendarLinks(eventDetails) {
   const iCalStart = formatICalDateUTCForLinks(startDateObj);
   const iCalEnd = formatICalDateUTCForLinks(endDateObj);
 
+  // Note: Google Calendar URL doesn't support reminders directly
+  // Both Apple and Google Calendar now use iCal file download which includes reminder (1 day before)
   return {
     google: `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeText(title)}&dates=${startDateTime}/${endDateTime}&details=${encodeText(description)}&location=${encodeText(location)}`,
     
@@ -147,7 +149,7 @@ function generateAppleCalendarLink(title, description, location, startDate, endD
 }
 
 /**
- * Generates iCal file content
+ * Generates iCal file content with reminder (1 day before)
  */
 function generateICalFile(title, description, location, startDate, endDate, allDay) {
   const uid = `wedding-${Date.now()}@wedding.com`;
@@ -178,6 +180,12 @@ function generateICalFile(title, description, location, startDate, endDate, allD
     `LOCATION:${location}`,
     'STATUS:CONFIRMED',
     'SEQUENCE:0',
+    // Reminder: 1 day before (P1D = Period 1 Day, -P1D means 1 day before)
+    'BEGIN:VALARM',
+    'TRIGGER:-P1D',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:Reminder: ${title}`,
+    'END:VALARM',
     'END:VEVENT',
     'END:VCALENDAR'
   ].join('\r\n');

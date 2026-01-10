@@ -9,6 +9,8 @@ import Schedule from "./Schedule";
 import FormalInvitation from "./FormalInvitation";
 import RSVP from "./RSVP";
 import RSVPPage from "./RSVPPage";
+import Gallery, { GALLERY_IMAGES } from "./Gallery";
+import { ChevronLeft, ChevronRight, X, Download } from "lucide-react";
 
 export default function InvitationBody({
   tab,
@@ -25,6 +27,48 @@ export default function InvitationBody({
     // Scroll to top immediately when switching tabs
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [tab]);
+
+  // Handle keyboard navigation for lightbox
+  React.useEffect(() => {
+    if (lightbox !== null && lightbox !== undefined) {
+      const handleKeyDown = (e) => {
+        if (e.key === "Escape") {
+          onLightbox(null);
+        } else if (e.key === "ArrowLeft" && lightbox > 0) {
+          onLightbox(lightbox - 1);
+        } else if (e.key === "ArrowRight" && lightbox < GALLERY_IMAGES.length - 1) {
+          onLightbox(lightbox + 1);
+        }
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [lightbox, onLightbox]);
+
+  // Download image function
+  const handleDownloadImage = async (e, imageSrc, imageAlt) => {
+    e.stopPropagation();
+    try {
+      const response = await fetch(imageSrc);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      
+      // Extract filename from image source or use alt text
+      const filename = imageSrc.split("/").pop() || imageAlt || "wedding-image";
+      link.download = filename;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading image:", error);
+      // Fallback: open image in new tab if download fails
+      window.open(imageSrc, "_blank");
+    }
+  };
 
   // Update URL hash when tab changes
   React.useEffect(() => {
@@ -63,7 +107,7 @@ export default function InvitationBody({
           {tab === "home" ? (
             <Home key="home" saveTheDate={saveTheDate} />
           ) : tab === "gallery" ? (
-            <Gallery key="gallery" gallery={gallery} onOpen={onLightbox} />
+            <Gallery key="gallery" onOpen={(index) => onLightbox(index)} />
           ) : tab === "rsvp" ? (
             <RSVPPage key="rsvp" showHeader={false} />
           ) : null}
@@ -71,22 +115,78 @@ export default function InvitationBody({
       </main>
 
       <AnimatePresence>
-        {lightbox && (
+        {lightbox !== null && lightbox !== undefined && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
             onClick={() => onLightbox(null)}
           >
-            <motion.img
+            <motion.div
+              className="gallery-lightbox-container relative w-full max-w-[95vw] max-h-[90vh] flex items-center justify-center gap-2 md:gap-4"
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 20, opacity: 0 }}
-              src={lightbox}
-              alt="Preview"
-              className="max-h-[85vh] w-auto rounded-2xl shadow-2xl"
-            />
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Previous button - nằm ngoài ảnh khi có không gian */}
+              {lightbox > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onLightbox(lightbox - 1);
+                  }}
+                  className="gallery-lightbox-nav-btn gallery-lightbox-nav-btn--prev flex-shrink-0 p-2 text-white hover:text-gray-300 transition-colors z-10"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft size={32} />
+                </button>
+              )}
+
+              {/* Image container */}
+              <div className="relative flex items-center justify-center max-h-[90vh]">
+                {/* Close button - góc trên bên phải */}
+                <button
+                  onClick={() => onLightbox(null)}
+                  className="gallery-lightbox-close-btn absolute top-0 right-0 z-10 p-2 text-white hover:text-gray-300 transition-colors"
+                  aria-label="Close"
+                >
+                  <X size={32} />
+                </button>
+
+                {/* Download button - góc dưới bên phải */}
+                <button
+                  onClick={(e) => handleDownloadImage(e, GALLERY_IMAGES[lightbox]?.src, GALLERY_IMAGES[lightbox]?.alt)}
+                  className="gallery-lightbox-download-btn absolute bottom-0 right-0 z-10 p-2 text-white hover:text-gray-300 transition-colors"
+                  aria-label="Download image"
+                >
+                  <Download size={32} />
+                </button>
+
+                {/* Image */}
+                <img
+                  key={lightbox}
+                  src={GALLERY_IMAGES[lightbox]?.src}
+                  alt={GALLERY_IMAGES[lightbox]?.alt || `Gallery image ${lightbox + 1}`}
+                  className="max-h-[85vh] max-w-full w-auto rounded-sm shadow-2xl object-contain"
+                />
+              </div>
+
+              {/* Next button - nằm ngoài ảnh khi có không gian */}
+              {lightbox < GALLERY_IMAGES.length - 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onLightbox(lightbox + 1);
+                  }}
+                  className="gallery-lightbox-nav-btn gallery-lightbox-nav-btn--next flex-shrink-0 p-2 text-white hover:text-gray-300 transition-colors z-10"
+                  aria-label="Next image"
+                >
+                  <ChevronRight size={32} />
+                </button>
+              )}
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -197,29 +297,5 @@ function Home({ saveTheDate }) {
   );
 }
 
-function Gallery({ gallery, onOpen }) {
-  return (
-    <motion.section
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 10 }}
-    >
-      <div className="gallery__message">
-        <motion.img
-          src="/commingsoon.png"
-          alt="Coming soon"
-          className="gallery__image"
-          initial={{ opacity: 0, scale: 1, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{
-            duration: 0.6,
-            ease: [0.2, 0.1, 0.25, 0.5],
-            delay: 0
-          }}
-        />
-      </div>
-    </motion.section>
-  );
-}
 
 

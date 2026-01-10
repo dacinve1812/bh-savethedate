@@ -10,7 +10,8 @@
   text-transform: uppercase;
 }
 .topnav__tab-underline {
-  /* underline của tab active - có thể thay đổi màu/độ dày */
+    /* underline của tab active - có thể thay đổi màu/độ dày */
+    display: none;
 }
 .open-me-text {
   font-family: "Cormorant Garamond", serif;
@@ -148,7 +149,7 @@
 @media (max-width: 550px) {
     .hero-stage{
         scale: 0.9;
-        top: -5%;
+        /* top: -5%; */
     }
 }
 .hero-picture {
@@ -450,7 +451,7 @@ display: block;
 }
 
 .schedule {
-    height: 80vh;
+    height: 95vh;
     background: #f3e9cf;
     color: #1c1a15;
     position: relative;
@@ -465,6 +466,7 @@ display: block;
     grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr);
     gap: clamp(2rem, 5vw, 6rem);
     padding: clamp(4rem, 10vw, 6rem);
+    /* white-space: nowrap; */
 }
 .schedule::before {
     content: "";
@@ -479,6 +481,8 @@ display: block;
     position: relative;
     z-index: 1;
     max-width: 520px;
+    width: 100%;
+    /* overflow-x: hidden; */
 }
 .schedule__header {
     margin-bottom: clamp(2rem, 4vw, 3rem);
@@ -552,6 +556,173 @@ display: block;
     object-fit: contain;
     display: block;
 }
+
+.schedule__calendar-wrapper {
+    position: relative;
+    margin-top: clamp(2rem, 4vw, 3rem);
+    z-index: 10;
+    width: 100%;
+    overflow-x: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.schedule__calendar-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: clamp(0.75rem, 2vw, 1rem) clamp(1.5rem, 3vw, 2rem);
+    background: rgba(28, 26, 21, 0.85);
+    color: #f7f4ef;
+    border: 1.5px solid rgba(92, 73, 122, 0.4);
+    border-radius: 4px;
+    font-family: "Spectral", serif;
+    font-size: clamp(0.85rem, 1.8vw, 1rem);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    max-width: 100%;
+    white-space: nowrap;
+}
+
+.schedule__calendar-button:hover {
+    background: rgba(28, 26, 21, 0.95);
+    border-color: rgba(92, 73, 122, 0.6);
+    transform: translateY(-2px);
+}
+
+.schedule__calendar-button:active {
+    transform: translateY(0);
+}
+
+.schedule__calendar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9998;
+}
+
+.schedule__calendar-modal-wrapper {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    width: 100%;
+    max-width: 90vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+}
+
+.schedule__calendar-modal {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    min-width: 320px;
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+}
+
+.schedule__calendar-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 1.75rem;
+    border-bottom: 1px solid rgba(92, 73, 122, 0.15);
+}
+
+.schedule__calendar-modal-title {
+    font-family: "Spectral", serif;
+    font-size: clamp(1.1rem, 2.2vw, 1.4rem);
+    font-weight: 600;
+    color: #1c2321;
+    margin: 0;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.schedule__calendar-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: #5c6f54;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.schedule__calendar-modal-close:hover {
+    background: rgba(92, 111, 84, 0.1);
+    color: #1c2321;
+}
+
+.schedule__calendar-options {
+    list-style: none;
+    margin: 0;
+    padding: 0.5rem 0;
+    overflow-y: auto;
+}
+
+.schedule__calendar-option {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    padding: 1rem 1.75rem;
+    background: transparent;
+    border: none;
+    text-align: left;
+    font-family: "Spectral", serif;
+    font-size: clamp(0.95rem, 1.9vw, 1.1rem);
+    color: #1c2321;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid rgba(92, 73, 122, 0.1);
+}
+
+.schedule__calendar-option:last-child {
+    border-bottom: none;
+}
+
+.schedule__calendar-option:hover {
+    background: rgba(92, 111, 84, 0.08);
+}
+
+.schedule__calendar-logo {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.schedule__calendar-icon-placeholder {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    display: block;
+}
+
+.schedule__calendar-label {
+    flex: 1;
+    font-weight: 400;
+}
+
 @media (max-width: 1024px) {
     .schedule {
         height: auto;
@@ -593,10 +764,137 @@ display: block;
     .schedule__item {
         padding: 0.75rem 0;
     }
+    .schedule__calendar-modal {
+        min-width: 280px;
+        max-width: calc(100vw - 2rem);
+    }
+    .schedule__calendar-modal-header {
+        padding: 1.25rem 1.5rem;
+    }
+    .schedule__calendar-option {
+        padding: 0.875rem 1.5rem;
+    }
+    .schedule__calendar-wrapper {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        overflow-x: hidden;
+    }
+    .schedule__calendar-button {
+        max-width: 100%;
+        width: auto;
+        min-width: 0;
+        padding: clamp(0.75rem, 2vw, 1rem) clamp(1.25rem, 3vw, 1.75rem);
+        font-size: clamp(0.8rem, 1.6vw, 0.95rem);
+    }
+    .schedule__calendar-dropdown {
+        left: auto;
+        right: auto;
+        margin-left: auto;
+        margin-right: auto;
+        min-width: 200px;
+        max-width: calc(100vw - 3rem);
+    }
 }
 @media (max-width: 400px) {
     .schedule__artwork {
         min-height: 40dvh;
+    }
+}
+
+/* Music Player */
+.music-player-wrapper {
+    position: fixed;
+    bottom: clamp(1.5rem, 4vw, 2.5rem);
+    left: clamp(1.5rem, 4vw, 2.5rem);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.music-player {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(28, 26, 21, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1.5px solid rgba(92, 111, 84, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.music-player:hover {
+    background: rgba(28, 26, 21, 0.95);
+    border-color: rgba(92, 111, 84, 0.5);
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.music-player:active {
+    transform: scale(0.95);
+}
+
+.music-player__icon {
+    color: #f7f4ef;
+    stroke-width: 2;
+    position: relative;
+    z-index: 10;
+}
+
+.music-player__ripple {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid rgba(92, 111, 84, 0.4);
+    top: calc(50% - 24px);
+    left: calc(50% - 24px);
+    transform-origin: 24px 24px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.music-player__ripple--1 {
+    border-color: rgba(92, 111, 84, 0.5);
+}
+
+.music-player__ripple--2 {
+    border-color: rgba(92, 111, 84, 0.3);
+}
+
+@media (max-width: 768px) {
+    .music-player-wrapper {
+        bottom: clamp(1rem, 3vw, 1.5rem);
+        left: clamp(1rem, 3vw, 1.5rem);
+    }
+    .music-player {
+        width: 34px;
+        height: 34px;
+    }
+    .music-player__icon {
+        width: 17px;
+        height: 17px;
+    }
+    .music-player__ripple {
+        width: 34px;
+        height: 34px;
+        top: calc(50% - 17px);
+        left: calc(50% - 17px);
+        transform-origin: 17px 17px;
+    }
+    .music-player__ripple--1,
+    .music-player__ripple--2 {
+        width: 34px;
+        height: 34px;
+        top: calc(50% - 17px);
+        left: calc(50% - 17px);
+        transform-origin: 17px 17px;
     }
 }
 

@@ -20,6 +20,12 @@ export default function InvitationBody({
   gallery,
   isInvitationOpen,
 }) {
+  // Scroll to top when tab changes
+  React.useEffect(() => {
+    // Scroll to top immediately when switching tabs
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [tab]);
+
   // Update URL hash when tab changes
   React.useEffect(() => {
     if (tab && tab !== "home") {
@@ -34,6 +40,8 @@ export default function InvitationBody({
     const hash = window.location.hash.slice(1);
     if (hash && ["gallery", "rsvp"].includes(hash)) {
       onTabChange(hash);
+      // Scroll to top when loading from hash
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
   }, []);
 

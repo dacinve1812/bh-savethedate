@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import envelopeImg from "../public/envelope.png"; // ảnh envelope nội bộ
 import InvitationBody from "./InvitationBody";
 import RSVPPage from "./RSVPPage";
+import MusicPlayer from "./MusicPlayer";
 import "./App.css";
 
 const SAVE_THE_DATE = {
@@ -28,10 +29,19 @@ export default function WeddingSite() {
   return (
     <Router>
       <Routes>
-        <Route path="/rsvp" element={<RSVPPage />} />
+        <Route path="/rsvp" element={<RSVPPageWithMusic />} />
         <Route path="*" element={<HomePage />} />
       </Routes>
     </Router>
+  );
+}
+
+function RSVPPageWithMusic() {
+  return (
+    <>
+      <RSVPPage />
+      <MusicPlayer audioSrc="/music.m4a" />
+    </>
   );
 }
 
@@ -85,6 +95,9 @@ function HomePage() {
           </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* Music Player - hiển thị khi đã mở invitation, autoPlay vì user đã click envelope */}
+      {isOpen && <MusicPlayer audioSrc="/music.m4a" autoPlay={true} />}
     </div>
   );
 }

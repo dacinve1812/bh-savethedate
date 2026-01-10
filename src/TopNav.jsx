@@ -117,13 +117,13 @@ export default function TopNav({ tab, onTabChange }) {
   };
 
   const handleHomeClick = () => {
+    // Scroll to top immediately before tab change
+    window.scrollTo({ top: 0, behavior: 'instant' });
     if (tab !== "home") {
-      onTabChange("home");
+      // Small delay to ensure scroll completes before tab change
       setTimeout(() => {
-        scrollToTop(800);
-      }, 100);
-    } else {
-      scrollToTop(800);
+        onTabChange("home");
+      }, 0);
     }
   };
 
@@ -152,7 +152,18 @@ export default function TopNav({ tab, onTabChange }) {
               key={key}
               label={label}
               active={tab === key}
-              onClick={() => (key === "home" ? handleHomeClick() : onTabChange(key))}
+              onClick={() => {
+                // Scroll to top immediately before tab change
+                window.scrollTo({ top: 0, behavior: 'instant' });
+                if (key === "home") {
+                  handleHomeClick();
+                } else {
+                  // Small delay to ensure scroll position is reset before tab change
+                  setTimeout(() => {
+                    onTabChange(key);
+                  }, 10);
+                }
+              }}
             />
           ))}
           <TabButton
@@ -179,7 +190,16 @@ function TabButton({ label, active, onClick }) {
       {active && (
         <motion.span
           layoutId="topnav-underline"
-          className="absolute inset-x-0 top-6 h-0.5 bg-[#5c6f54]"
+          className="absolute inset-x-0 bottom-0 h-0.5 bg-[#5c6f54]"
+          initial={false}
+          transition={{
+            layout: {
+              type: "spring",
+              stiffness: 500,
+              damping: 30,
+              duration: 0.3
+            }
+          }}
         />
       )}
     </button>

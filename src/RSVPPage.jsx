@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import guestList from "./guests.json";
+import { useLanguage } from "./contexts/LanguageContext";
+import { translations } from "./translations";
 import "./RSVPPage.css";
 
 const GUEST_LIST = guestList;
@@ -19,6 +21,8 @@ function normalizeVietnamese(str) {
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5BKfGGqLcA4TOVJIttnTSq_5HSKPg44bGO_zOpGsxJzgoxR1uXVUCBxplC58osGfq/exec"; // Paste Web App URL vào đây
 
 export default function RSVPPage({ showHeader = true }) {
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
   const [formData, setFormData] = useState({
     fullName: "",
     attending: "",
@@ -110,7 +114,7 @@ export default function RSVPPage({ showHeader = true }) {
       // Nhưng nếu không có lỗi, coi như thành công
       setSubmitMessage({
         type: "success",
-        text: "Thank you! Your RSVP has been submitted successfully.",
+        text: t.submitSuccess,
       });
 
       // Reset form sau 2 giây
@@ -131,7 +135,7 @@ export default function RSVPPage({ showHeader = true }) {
       console.error("Error submitting form:", error);
       setSubmitMessage({
         type: "error",
-        text: "Sorry, there was an error submitting your RSVP. Please try again.",
+        text: t.submitError,
       });
     } finally {
       setIsSubmitting(false);
@@ -161,7 +165,7 @@ export default function RSVPPage({ showHeader = true }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
             >
-              RSVP
+              {t.rsvpTitle}
             </motion.h1>
             <motion.p
               className="rsvp-page__hero-subtitle"
@@ -169,7 +173,7 @@ export default function RSVPPage({ showHeader = true }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              We look forward to seeing you! Fill out form below.
+              {t.rsvpSubtitle}
             </motion.p>
           </div>
         </div>
@@ -177,7 +181,7 @@ export default function RSVPPage({ showHeader = true }) {
 
       {/* Wedding Title */}
       <section className="rsvp-page__title-section">
-        <h2 className="rsvp-page__wedding-title">Bao & Hau's Wedding</h2>
+        <h2 className="rsvp-page__wedding-title">{t.weddingTitle}</h2>
       </section>
 
       {/* RSVP Form */}
@@ -185,14 +189,14 @@ export default function RSVPPage({ showHeader = true }) {
         <form className="rsvp-page__form" onSubmit={handleSubmit}>
           <div className="rsvp-page__form-group rsvp-page__typeahead" ref={typeaheadRef}>
             <label htmlFor="fullName" className="rsvp-page__label">
-              Find your name <span className="rsvp-page__required">(required)</span>
+              {t.findYourName} <span className="rsvp-page__required">{t.required}</span>
             </label>
             <input
               type="text"
               id="fullName"
               name="fullName"
               className="rsvp-page__input"
-              placeholder="Type your name as on the card..."
+              placeholder={t.namePlaceholder}
               value={nameQuery}
               onChange={(e) => {
                 setNameQuery(e.target.value);
@@ -238,7 +242,7 @@ export default function RSVPPage({ showHeader = true }) {
 
           <div className="rsvp-page__form-group">
             <label className="rsvp-page__label">
-              Will you be attending? <span className="rsvp-page__required">(required)</span>
+              {t.willAttend} <span className="rsvp-page__required">{t.required}</span>
             </label>
             <div className="rsvp-page__radio-group">
               <label className="rsvp-page__radio-label">
@@ -251,7 +255,7 @@ export default function RSVPPage({ showHeader = true }) {
                   onChange={handleInputChange}
                   required
                 />
-                <span>Yes</span>
+                <span>{t.yes}</span>
               </label>
               <label className="rsvp-page__radio-label">
                 <input
@@ -263,14 +267,14 @@ export default function RSVPPage({ showHeader = true }) {
                   onChange={handleInputChange}
                   required
                 />
-                <span>No</span>
+                <span>{t.no}</span>
               </label>
             </div>
           </div>
 
           <div className="rsvp-page__form-group">
             <label htmlFor="numberOfGuests" className="rsvp-page__label">
-              Number of guests
+              {t.numberOfGuests}
             </label>
             <select
               id="numberOfGuests"
@@ -279,20 +283,20 @@ export default function RSVPPage({ showHeader = true }) {
               value={formData.numberOfGuests}
               onChange={handleInputChange}
             >
-              <option value="">Select number of guests</option>
+              <option value="">{t.selectGuests}</option>
               <option value="1">1</option>
               <option value="2">2</option>
               <option value="3">3</option>
               <option value="4">4</option>
               <option value="5">5</option>
-              <option value="other">Other</option>
+              <option value="other">{t.other}</option>
             </select>
             {formData.numberOfGuests === "other" && (
               <input
                 type="number"
                 name="numberOfGuestsOther"
                 className="rsvp-page__input"
-                placeholder="Enter number of guests"
+                placeholder={t.enterGuests}
                 value={formData.numberOfGuestsOther}
                 onChange={handleInputChange}
                 min="6"
@@ -303,7 +307,7 @@ export default function RSVPPage({ showHeader = true }) {
 
           <div className="rsvp-page__form-group">
             <label htmlFor="guestNames" className="rsvp-page__label">
-              Names of Guests in your Party
+              {t.guestNames}
             </label>
             <textarea
               id="guestNames"
@@ -317,7 +321,7 @@ export default function RSVPPage({ showHeader = true }) {
 
           <div className="rsvp-page__form-group">
             <label className="rsvp-page__label">
-              Vegetarian or Non-vegetarian
+              {t.dietaryPreference}
             </label>
             <div className="rsvp-page__radio-group">
               <label className="rsvp-page__radio-label">
@@ -329,7 +333,7 @@ export default function RSVPPage({ showHeader = true }) {
                   checked={formData.dietaryPreference === "vegetarian"}
                   onChange={handleInputChange}
                 />
-                <span>Vegetarian</span>
+                <span>{t.vegetarian}</span>
               </label>
               <label className="rsvp-page__radio-label">
                 <input
@@ -340,14 +344,14 @@ export default function RSVPPage({ showHeader = true }) {
                   checked={formData.dietaryPreference === "non-vegetarian"}
                   onChange={handleInputChange}
                 />
-                <span>Non-vegetarian</span>
+                <span>{t.nonVegetarian}</span>
               </label>
             </div>
           </div>
 
           <div className="rsvp-page__form-group">
             <label htmlFor="comments" className="rsvp-page__label">
-              Questions or Comments
+              {t.questionsComments}
             </label>
             <textarea
               id="comments"
@@ -372,7 +376,7 @@ export default function RSVPPage({ showHeader = true }) {
             className="rsvp-page__submit-button"
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Submitting..." : "Submit"}
+            {isSubmitting ? t.submitting : t.submit}
           </button>
         </form>
       </section>

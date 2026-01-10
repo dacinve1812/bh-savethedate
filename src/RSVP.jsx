@@ -1,11 +1,16 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { useLanguage } from "./contexts/LanguageContext";
+import { translations } from "./translations";
 
 const rsvpMedia = {
     rsvpImage: "/feature-hero-desktop.jpg",
 };
 
 export default function RSVP({ onRSVPClick }) {
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
+  
   const handleRSVPClick = () => {
     if (onRSVPClick) {
       onRSVPClick();
@@ -39,7 +44,7 @@ export default function RSVP({ onRSVPClick }) {
             }}
             onClick={handleRSVPClick}
           >
-            RSVP
+            {t.rsvpButton}
           </motion.button>
         </div>
       </div>

@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import envelopeImg from "../public/envelope.png"; // ảnh envelope nội bộ
 import InvitationBody from "./InvitationBody";
 import RSVPPage from "./RSVPPage";
 import MusicPlayer from "./MusicPlayer";
+import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
+import LanguageSelector from "./components/LanguageSelector";
+import { translations } from "./translations";
 import "./App.css";
 
 const SAVE_THE_DATE = {
@@ -27,12 +30,14 @@ const SAVE_THE_DATE = {
 
 export default function WeddingSite() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/rsvp" element={<RSVPPageWithMusic />} />
-        <Route path="*" element={<HomePage />} />
-      </Routes>
-    </Router>
+    <LanguageProvider>
+      <Router>
+        <Routes>
+          <Route path="/rsvp" element={<RSVPPageWithMusic />} />
+          <Route path="*" element={<HomePage />} />
+        </Routes>
+      </Router>
+    </LanguageProvider>
   );
 }
 
@@ -49,11 +54,38 @@ function HomePage() {
   const [isOpen, setIsOpen] = useState(false);
   const [tab, setTab] = useState("home");
   const [lightbox, setLightbox] = useState(null);
+  const { language } = useLanguage();
+  const [showLanguageModal, setShowLanguageModal] = useState(true); // Start with modal open
+  const t = translations[language] || translations.en;
+
+  // Hide modal when invitation is opened, show when on initial page
+  useEffect(() => {
+    if (isOpen) {
+      setShowLanguageModal(false);
+    } else {
+      // Always show modal when on initial page (before envelope)
+      setShowLanguageModal(true);
+    }
+  }, [isOpen]);
+
+  const handleLanguageSelect = () => {
+    setShowLanguageModal(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#f6f7ef] text-[#1c2321]">
+      {/* Language Selector Modal - hiển thị ở initial page (trước envelope) */}
+      {!isOpen && showLanguageModal && (
+        <LanguageSelector 
+          key="language-selector"
+          onSelect={handleLanguageSelect} 
+          isOpen={showLanguageModal}
+          onClose={() => setShowLanguageModal(false)}
+        />
+      )}
+      
       <AnimatePresence>
-        {!isOpen && (
+        {!isOpen && !showLanguageModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -67,7 +99,7 @@ function HomePage() {
               <motion.p 
                 className="open-me-text"
               >
-                Open me!
+                {t.openMe}
               </motion.p>
             </div>
           </motion.div>

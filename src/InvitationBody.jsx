@@ -9,8 +9,22 @@ import Schedule from "./Schedule";
 import FormalInvitation from "./FormalInvitation";
 import RSVP from "./RSVP";
 import RSVPPage from "./RSVPPage";
-import Gallery, { GALLERY_IMAGES } from "./Gallery";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import Gallery, { GALLERY_IMAGES, getOptimizedImagePaths } from "./Gallery";
+
+// Helper function để lấy fullSize image cho lightbox
+const getFullSizeImageSrc = (image) => {
+  // Nếu có fullSize được định nghĩa sẵn, dùng nó
+  if (image?.fullSize) return image.fullSize;
+  
+  // Nếu có src, tự động generate paths từ script
+  if (image?.src) {
+    const paths = getOptimizedImagePaths(image.src);
+    return paths.fullSize || image.src; // Fallback về src nếu không tìm thấy
+  }
+  
+  return image?.src || '';
+};
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function InvitationBody({
   tab,
@@ -50,6 +64,17 @@ export default function InvitationBody({
   const [isDragging, setIsDragging] = React.useState(false);
   const [direction, setDirection] = React.useState(0); // -1: swipe left (next), 1: swipe right (prev)
   const prevIndexRef = React.useRef(lightbox);
+  
+  // Reset dragOffset sau khi image đã transition xong để animation mượt hơn
+  React.useEffect(() => {
+    if (lightbox !== null && !isDragging) {
+      // Delay để animation transition image hoàn tất trước khi reset
+      const timer = setTimeout(() => {
+        setDragOffset(0);
+      }, 400); // Match với duration của image transition (0.4s)
+      return () => clearTimeout(timer);
+    }
+  }, [lightbox, isDragging]);
 
   // Track direction for animation
   React.useEffect(() => {
@@ -128,7 +153,6 @@ export default function InvitationBody({
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 20, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
             >
               {/* Previous button - nằm ngoài ảnh khi có không gian */}
               {lightbox > 0 && (
@@ -150,7 +174,9 @@ export default function InvitationBody({
                 className="relative flex items-center justify-center max-h-[90vh] touch-none"
                 drag="x"
                 dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.3}
+                dragElastic={0.2}
+                dragMomentum={false}
+                onClick={(e) => e.stopPropagation()}
                 onDrag={(e, info) => {
                   setDragOffset(info.offset.x);
                   setIsDragging(true);
@@ -162,6 +188,8 @@ export default function InvitationBody({
                   
                   // Check if swipe is significant enough (distance or velocity)
                   if (Math.abs(info.offset.x) > threshold || Math.abs(velocity) > 400) {
+                    // Không reset dragOffset ngay - để animation transition mượt hơn
+                    // dragOffset sẽ được reset trong useEffect sau khi image đã transition xong
                     if (info.offset.x > 0 || velocity > 0) {
                       // Swipe right - go to previous image
                       handleSwipeNavigation("right");
@@ -169,35 +197,40 @@ export default function InvitationBody({
                       // Swipe left - go to next image
                       handleSwipeNavigation("left");
                     }
+                  } else {
+                    // Nếu không đủ threshold, reset ngay để snap back mượt mà
+                    setDragOffset(0);
                   }
-                  setDragOffset(0);
                 }}
                 style={{
                   x: dragOffset,
                   cursor: isDragging ? "grabbing" : "grab"
                 }}
+                animate={{
+                  x: isDragging ? dragOffset : 0,
+                }}
+                transition={{
+                  x: {
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 35,
+                    duration: isDragging ? 0 : 0.35
+                  }
+                }}
               >
-                {/* Close button - góc trên bên phải */}
-                <button
-                  onClick={() => onLightbox(null)}
-                  className="gallery-lightbox-close-btn absolute top-0 right-0 z-10 p-2 text-white hover:text-gray-300 transition-colors pointer-events-auto"
-                  aria-label="Close"
-                >
-                  <X size={32} />
-                </button>
-
                 {/* Image with smooth animation */}
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.img
                     key={lightbox}
-                    src={GALLERY_IMAGES[lightbox]?.src}
+                    src={getFullSizeImageSrc(GALLERY_IMAGES[lightbox])}
                     alt={GALLERY_IMAGES[lightbox]?.alt || `Gallery image ${lightbox + 1}`}
                     className="max-h-[85vh] max-w-full w-auto rounded-sm shadow-2xl object-contain select-none pointer-events-none"
                     draggable={false}
+                    loading="eager"
                     initial={{ 
                       opacity: 0, 
                       x: direction > 0 ? 100 : direction < 0 ? -100 : 0,
-                      scale: 0.95
+                      scale: 0.96
                     }}
                     animate={{ 
                       opacity: 1, 
@@ -207,11 +240,11 @@ export default function InvitationBody({
                     exit={{ 
                       opacity: 0, 
                       x: direction > 0 ? -100 : 100,
-                      scale: 0.95
+                      scale: 0.96
                     }}
                     transition={{
-                      duration: 0.35,
-                      ease: [0.25, 0.1, 0.25, 1]
+                      duration: 0.4,
+                      ease: [0.25, 0.46, 0.45, 0.94] // easeOutQuad - mượt hơn
                     }}
                   />
                 </AnimatePresence>

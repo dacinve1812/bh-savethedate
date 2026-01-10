@@ -2,18 +2,15 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, X } from "lucide-react";
 import { generateCalendarLinks, downloadICalFile } from "./utils/calendarUtils";
-
-const EVENTS = [
-  { time: "7:00 AM", title: "Bride's Tea Ceremony" },
-  { time: "10:00 AM", title: "Groom's Tea Ceremony" },
-  { time: "1:00 PM – 4:00 PM", title: "Lunch/Travel & Rest" },
-  { time: "6:00 PM", title: "Guest Reception" },
-  { time: "7:00 PM", title: "Wedding Ceremony" },
-];
+import { useLanguage } from "./contexts/LanguageContext";
+import { translations } from "./translations";
 
 const WEDDING_DATE = new Date(2026, 4, 30); // May 30, 2026
 
 export default function Schedule() {
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
+  const EVENTS = t.events;
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const calendarRef = useRef(null);
   const buttonRef = useRef(null);
@@ -37,10 +34,17 @@ export default function Schedule() {
     }
   }, [isCalendarOpen]);
 
+  // Generate calendar links with translated content
+  const calendarTitle = language === 'vi' 
+    ? "Đám cưới của Bảo và Hậu" 
+    : "Bao & Hau's Wedding";
+  const calendarDescription = language === 'vi'
+    ? "Chúng tôi rất mong được chào đón bạn!\n\nLịch trình:\n" + EVENTS.map(e => `${e.time} - ${e.title}`).join('\n')
+    : "We can't wait to celebrate with you!\n\nSchedule:\n" + EVENTS.map(e => `${e.time} - ${e.title}`).join('\n');
+  
   const calendarLinks = generateCalendarLinks({
-    title: "Bao & Hau's Wedding (Đám cưới của Bảo và Hậu)",
-    description: "We can't wait to celebrate with you!\n\nSchedule:\n" + 
-      EVENTS.map(e => `${e.time} - ${e.title}`).join('\n'),
+    title: calendarTitle,
+    description: calendarDescription,
     location: "",
     startDate: WEDDING_DATE,
     startTime: "7:00 AM",
@@ -105,9 +109,9 @@ export default function Schedule() {
               ease: [0.25, 0.1, 0.25, 1]
             }}
           >
-            <p className="schedule__eyebrow">The Day&apos;s Events</p>
+            <p className="schedule__eyebrow">{t.scheduleEyebrow}</p>
             <h2 id="schedule-heading" className="schedule__title">
-              May 30, 2026
+              {t.scheduleDate}
             </h2>
           </motion.header>
 
@@ -150,7 +154,7 @@ export default function Schedule() {
               aria-haspopup="dialog"
             >
               <Calendar size={18} />
-              <span>Add to Calendar</span>
+              <span>{t.addToCalendar}</span>
             </button>
 
             <AnimatePresence>
@@ -182,7 +186,7 @@ export default function Schedule() {
                     >
                     <div className="schedule__calendar-modal-header">
                       <h3 id="calendar-modal-title" className="schedule__calendar-modal-title">
-                        Add to Calendar
+                        {t.calendarModalTitle}
                       </h3>
                       <button
                         className="schedule__calendar-modal-close"

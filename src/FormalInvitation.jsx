@@ -1,7 +1,12 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { useLanguage } from "./contexts/LanguageContext";
+import { translations } from "./translations";
 
 export default function FormalInvitation() {
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
+  
   return (
     <section className="formal-invitation">
       <div className="formal-invitation__wrapper">
@@ -80,7 +85,7 @@ export default function FormalInvitation() {
               ease: [0.25, 0.1, 0.25, 1]
             }}
           >
-            Formal invitation to follow
+            {t.formalInvitationText}
           </motion.p>
         </div>
       </div>

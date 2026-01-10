@@ -1,19 +1,23 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, useMotionValueEvent, useScroll } from "framer-motion";
-
-const TABS = [
-  { key: "home", label: "Home" },
-  { key: "gallery", label: "Gallery" },
-  { key: "rsvp", label: "RSVP" },
-];
+import { useLanguage } from "./contexts/LanguageContext";
+import { translations } from "./translations";
 
 export default function TopNav({ tab, onTabChange }) {
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
   const [isScrolled, setIsScrolled] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [canShow, setCanShow] = useState(false); // delay initial reveal
   const navRef = useRef(null);
   const lastScrollY = useRef(0);
   const { scrollY } = useScroll();
+  
+  const TABS = [
+    { key: "home", label: t.home },
+    { key: "gallery", label: t.gallery },
+    { key: "rsvp", label: t.rsvp },
+  ];
 
   useEffect(() => {
     // Delay showing the navbar to allow HeroShowcase animations (~2s) to play
@@ -167,7 +171,7 @@ export default function TopNav({ tab, onTabChange }) {
             />
           ))}
           <TabButton
-            label="Timeline"
+            label={t.timeline}
             active={false}
             onClick={handleTimelineClick}
           />

@@ -45,7 +45,7 @@ export default function Schedule() {
     startDate: WEDDING_DATE,
     startTime: "7:00 AM",
     endTime: "11:00 PM",
-    allDay: false
+    allDay: true
   });
 
   // ============================================

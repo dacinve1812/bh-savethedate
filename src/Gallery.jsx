@@ -22,6 +22,8 @@ export const GALLERY_IMAGES = [
   { src: "/photo2.jpg", alt: "Wedding moment 10" },
   { src: "/photo2-2.jpg", alt: "Wedding moment 11" },
   { src: "/DSC02125.JPG", alt: "Wedding moment 1" },
+  { src: "/DSC00717.JPG", alt: "Wedding moment 12" },
+  { src: "/DSC00763.JPG", alt: "Wedding moment 13" },
 ];
 
 export default function Gallery({ onOpen }) {

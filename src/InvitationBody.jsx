@@ -10,7 +10,7 @@ import FormalInvitation from "./FormalInvitation";
 import RSVP from "./RSVP";
 import RSVPPage from "./RSVPPage";
 import Gallery, { GALLERY_IMAGES } from "./Gallery";
-import { ChevronLeft, ChevronRight, X, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 export default function InvitationBody({
   tab,
@@ -45,30 +45,30 @@ export default function InvitationBody({
     }
   }, [lightbox, onLightbox]);
 
-  // Download image function
-  const handleDownloadImage = async (e, imageSrc, imageAlt) => {
-    e.stopPropagation();
-    try {
-      const response = await fetch(imageSrc);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      
-      // Extract filename from image source or use alt text
-      const filename = imageSrc.split("/").pop() || imageAlt || "wedding-image";
-      link.download = filename;
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error downloading image:", error);
-      // Fallback: open image in new tab if download fails
-      window.open(imageSrc, "_blank");
+  // Swipe gesture state
+  const [dragOffset, setDragOffset] = React.useState(0);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [direction, setDirection] = React.useState(0); // -1: swipe left (next), 1: swipe right (prev)
+  const prevIndexRef = React.useRef(lightbox);
+
+  // Track direction for animation
+  React.useEffect(() => {
+    if (lightbox !== null && prevIndexRef.current !== null && prevIndexRef.current !== lightbox) {
+      setDirection(lightbox > prevIndexRef.current ? 1 : -1);
     }
-  };
+    prevIndexRef.current = lightbox;
+  }, [lightbox]);
+
+  // Handle swipe navigation
+  const handleSwipeNavigation = React.useCallback((dir) => {
+    if (dir === "left" && lightbox < GALLERY_IMAGES.length - 1) {
+      setDirection(1); // Next image - animate from right
+      onLightbox(lightbox + 1);
+    } else if (dir === "right" && lightbox > 0) {
+      setDirection(-1); // Previous image - animate from left
+      onLightbox(lightbox - 1);
+    }
+  }, [lightbox, onLightbox]);
 
   // Update URL hash when tab changes
   React.useEffect(() => {
@@ -135,6 +135,7 @@ export default function InvitationBody({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
+                    setDirection(-1); // Previous - animate from left
                     onLightbox(lightbox - 1);
                   }}
                   className="gallery-lightbox-nav-btn gallery-lightbox-nav-btn--prev flex-shrink-0 p-2 text-white hover:text-gray-300 transition-colors z-10"
@@ -144,40 +145,84 @@ export default function InvitationBody({
                 </button>
               )}
 
-              {/* Image container */}
-              <div className="relative flex items-center justify-center max-h-[90vh]">
+              {/* Image container with swipe support */}
+              <motion.div
+                className="relative flex items-center justify-center max-h-[90vh] touch-none"
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.3}
+                onDrag={(e, info) => {
+                  setDragOffset(info.offset.x);
+                  setIsDragging(true);
+                }}
+                onDragEnd={(e, info) => {
+                  setIsDragging(false);
+                  const threshold = 80; // Minimum swipe distance in pixels
+                  const velocity = info.velocity.x;
+                  
+                  // Check if swipe is significant enough (distance or velocity)
+                  if (Math.abs(info.offset.x) > threshold || Math.abs(velocity) > 400) {
+                    if (info.offset.x > 0 || velocity > 0) {
+                      // Swipe right - go to previous image
+                      handleSwipeNavigation("right");
+                    } else {
+                      // Swipe left - go to next image
+                      handleSwipeNavigation("left");
+                    }
+                  }
+                  setDragOffset(0);
+                }}
+                style={{
+                  x: dragOffset,
+                  cursor: isDragging ? "grabbing" : "grab"
+                }}
+              >
                 {/* Close button - góc trên bên phải */}
                 <button
                   onClick={() => onLightbox(null)}
-                  className="gallery-lightbox-close-btn absolute top-0 right-0 z-10 p-2 text-white hover:text-gray-300 transition-colors"
+                  className="gallery-lightbox-close-btn absolute top-0 right-0 z-10 p-2 text-white hover:text-gray-300 transition-colors pointer-events-auto"
                   aria-label="Close"
                 >
                   <X size={32} />
                 </button>
 
-                {/* Download button - góc dưới bên phải */}
-                <button
-                  onClick={(e) => handleDownloadImage(e, GALLERY_IMAGES[lightbox]?.src, GALLERY_IMAGES[lightbox]?.alt)}
-                  className="gallery-lightbox-download-btn absolute bottom-0 right-0 z-10 p-2 text-white hover:text-gray-300 transition-colors"
-                  aria-label="Download image"
-                >
-                  <Download size={32} />
-                </button>
-
-                {/* Image */}
-                <img
-                  key={lightbox}
-                  src={GALLERY_IMAGES[lightbox]?.src}
-                  alt={GALLERY_IMAGES[lightbox]?.alt || `Gallery image ${lightbox + 1}`}
-                  className="max-h-[85vh] max-w-full w-auto rounded-sm shadow-2xl object-contain"
-                />
-              </div>
+                {/* Image with smooth animation */}
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.img
+                    key={lightbox}
+                    src={GALLERY_IMAGES[lightbox]?.src}
+                    alt={GALLERY_IMAGES[lightbox]?.alt || `Gallery image ${lightbox + 1}`}
+                    className="max-h-[85vh] max-w-full w-auto rounded-sm shadow-2xl object-contain select-none pointer-events-none"
+                    draggable={false}
+                    initial={{ 
+                      opacity: 0, 
+                      x: direction > 0 ? 100 : direction < 0 ? -100 : 0,
+                      scale: 0.95
+                    }}
+                    animate={{ 
+                      opacity: 1, 
+                      x: 0,
+                      scale: 1
+                    }}
+                    exit={{ 
+                      opacity: 0, 
+                      x: direction > 0 ? -100 : 100,
+                      scale: 0.95
+                    }}
+                    transition={{
+                      duration: 0.35,
+                      ease: [0.25, 0.1, 0.25, 1]
+                    }}
+                  />
+                </AnimatePresence>
+              </motion.div>
 
               {/* Next button - nằm ngoài ảnh khi có không gian */}
               {lightbox < GALLERY_IMAGES.length - 1 && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
+                    setDirection(1); // Next - animate from right
                     onLightbox(lightbox + 1);
                   }}
                   className="gallery-lightbox-nav-btn gallery-lightbox-nav-btn--next flex-shrink-0 p-2 text-white hover:text-gray-300 transition-colors z-10"

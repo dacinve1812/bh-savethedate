@@ -9,6 +9,7 @@ export default function MusicPlayer({ audioSrc = "/music.m4a", autoPlay = false 
   const hasInitialized = useRef(false);
   const fadeIntervalRef = useRef(null);
   const hasAutoPlayed = useRef(false); // Track if autoPlay has been handled
+  const wasPlayingBeforeHidden = useRef(false); // Track if audio was playing before page was hidden
 
   // Fade in/out function
   const fadeAudio = useCallback((targetVolume, targetMuted, duration = 500) => {
@@ -156,14 +157,62 @@ export default function MusicPlayer({ audioSrc = "/music.m4a", autoPlay = false 
     }
   }, [isMuted, fadeAudio]);
 
-  // Cleanup on unmount
+  // Handle page visibility changes (pause when user leaves tab/app)
   useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!audioRef.current || !hasInitialized.current) return;
+
+      if (document.hidden) {
+        // Page is now hidden (user switched tab, minimized browser, or switched apps on mobile)
+        // Save current playing state and pause audio immediately
+        wasPlayingBeforeHidden.current = !audioRef.current.paused && !isMuted;
+        if (!audioRef.current.paused) {
+          // Stop any ongoing fade
+          if (fadeIntervalRef.current) {
+            clearInterval(fadeIntervalRef.current);
+            fadeIntervalRef.current = null;
+          }
+          // Pause immediately without fade for better UX
+          audioRef.current.pause();
+          setIsPlaying(false);
+        }
+      } else {
+        // Page is now visible again
+        // Only resume if it was playing before and is not muted
+        if (wasPlayingBeforeHidden.current && !isMuted) {
+          // Small delay to ensure page is fully visible
+          setTimeout(() => {
+            if (!audioRef.current || document.hidden) return;
+            
+            const playPromise = audioRef.current.play();
+            if (playPromise !== undefined) {
+              playPromise
+                .then(() => {
+                  setIsPlaying(true);
+                  // Resume with fade in
+                  fadeAudio(0.5, false, 500);
+                })
+                .catch((error) => {
+                  console.log("Audio resume failed (autoplay policy):", error);
+                  // If resume fails due to autoplay policy, user will need to manually unmute
+                  setIsPlaying(false);
+                  wasPlayingBeforeHidden.current = false;
+                });
+            }
+          }, 100);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (fadeIntervalRef.current) {
         clearInterval(fadeIntervalRef.current);
       }
     };
-  }, []);
+  }, [isMuted, fadeAudio]);
 
   const toggleMute = () => {
     setIsMuted(!isMuted);

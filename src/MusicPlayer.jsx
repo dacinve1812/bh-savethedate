@@ -146,13 +146,13 @@ export default function MusicPlayer({ audioSrc = "/music.m4a", autoPlay = false 
     // If this is the autoPlay initialization, fade in
     if (hasAutoPlayed.current && !isMuted) {
       hasAutoPlayed.current = false; // Only handle once
-      fadeAudio(0.5, false, 800);
+      fadeAudio(0.2, false, 800);
       return;
     }
     
     // Handle normal mute/unmute after initialization
     if (!hasAutoPlayed.current) {
-      const targetVolume = 0.5;
+      const targetVolume = 0.2;
       fadeAudio(targetVolume, isMuted, 500);
     }
   }, [isMuted, fadeAudio]);
@@ -190,7 +190,7 @@ export default function MusicPlayer({ audioSrc = "/music.m4a", autoPlay = false 
                 .then(() => {
                   setIsPlaying(true);
                   // Resume with fade in
-                  fadeAudio(0.5, false, 500);
+                  fadeAudio(0.2, false, 500);
                 })
                 .catch((error) => {
                   console.log("Audio resume failed (autoplay policy):", error);

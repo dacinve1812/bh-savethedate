@@ -31,12 +31,12 @@ const SAVE_THE_DATE = {
 export default function WeddingSite() {
   return (
     <LanguageProvider>
-      <Router>
-        <Routes>
+    <Router>
+      <Routes>
           <Route path="/rsvp" element={<RSVPPageWithMusic />} />
-          <Route path="*" element={<HomePage />} />
-        </Routes>
-      </Router>
+        <Route path="*" element={<HomePage />} />
+      </Routes>
+    </Router>
     </LanguageProvider>
   );
 }
@@ -113,6 +113,7 @@ function HomePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            className="invitation-content-wrapper"
           >
             <InvitationBody
               tab={tab}

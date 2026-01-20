@@ -43,9 +43,6 @@ export default function LanguageSelector({ onSelect, isOpen: controlledIsOpen = 
         className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-[90%] mx-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-2xl font-serif text-[#253126] text-center mb-6">
-          {translations[language]?.selectLanguage || translations.en.selectLanguage}
-        </h2>
         
         <div className="flex flex-col gap-4">
           <motion.button

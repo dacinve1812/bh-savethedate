@@ -32,6 +32,19 @@ export default function RSVP({ onRSVPClick }) {
             }}
           >
           </motion.div>
+          <motion.p
+            className="rsvp__message"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false }}
+            transition={{
+              duration: 0.7,
+              delay: 0.2,
+              ease: [0.25, 0.1, 0.25, 1]
+            }}
+          >
+            {t.rsvpMessage || "We hope to have you join us"}
+          </motion.p>
           <motion.button
             className="rsvp__button"
             initial={{ opacity: 0, y: 20 }}
@@ -39,7 +52,7 @@ export default function RSVP({ onRSVPClick }) {
             viewport={{ once: false }}
             transition={{
               duration: 0.7,
-              delay: 0.2,
+              delay: 0.3,
               ease: [0.25, 0.1, 0.25, 1]
             }}
             onClick={handleRSVPClick}

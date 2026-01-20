@@ -7,6 +7,7 @@ import FeatureIntro from "./FeatureIntro";
 import ChanceEncounter from "./ChanceEncounter";
 import Schedule from "./Schedule";
 import FormalInvitation from "./FormalInvitation";
+import Location from "./Location";
 import RSVP from "./RSVP";
 import RSVPPage from "./RSVPPage";
 import Gallery, { GALLERY_IMAGES, getOptimizedImagePaths } from "./Gallery";
@@ -123,8 +124,10 @@ export default function InvitationBody({
           <FeatureIntro key="feature-intro" />
           <ChanceEncounter key="chance" />
           <Schedule key="schedule" />
-          <FormalInvitation key="formal-invitation" />
+          <Location key="location" />
           <RSVP key="rsvp" onRSVPClick={() => onTabChange("rsvp")} />
+          <FormalInvitation key="formal-invitation" />
+          
         </>
       )}
       <main className="mx-auto">

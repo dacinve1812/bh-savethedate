@@ -1,3 +1,5 @@
+import { customVietnameseTranslations } from './customTranslations';
+
 export const translations = {
   en: {
     // Initial page
@@ -26,7 +28,17 @@ export const translations = {
     // Formal Invitation
     formalInvitationText: "Formal invitation to follow",
     
+    // Location
+    location: "Location",
+    locationVenueName: "Venue Name",
+    locationAddress: "Venue Address, City",
+    locationTime: "From 5:00 PM to 1:00 AM",
+    openInMaps: "Open in Maps",
+    googleMaps: "Google Maps",
+    appleMaps: "Apple Maps",
+    
     // RSVP
+    rsvpMessage: "We hope to have you join us",
     rsvpButton: "RSVP",
     rsvpTitle: "RSVP",
     rsvpSubtitle: "We look forward to seeing you! Fill out form below.",
@@ -62,7 +74,7 @@ export const translations = {
     events: [
       { time: "7:00 AM", title: "Bride's Tea Ceremony" },
       { time: "10:00 AM", title: "Groom's Tea Ceremony" },
-      { time: "1:00 PM – 4:00 PM", title: "Lunch/Travel & Rest" },
+      { time: "1:00 PM", title: "Lunch/Travel & Rest" },
       { time: "6:00 PM", title: "Guest Reception" },
       { time: "7:00 PM", title: "Wedding Ceremony" },
     ],
@@ -85,20 +97,29 @@ export const translations = {
     galleryTitle: "Thư viện ảnh tiền hôn lễ",
     
     // Schedule
-    scheduleEyebrow: "Các sự kiện trong ngày",
+    scheduleEyebrow: "Chuỗi sự kiện",
     scheduleHeading: "Lịch trình ngày cưới",
     scheduleDate: "30 tháng 5, 2026",
     addToCalendar: "Thêm vào lịch",
     calendarModalTitle: "Thêm vào lịch",
     
     // Formal Invitation
-    formalInvitationText: "Thiệp mời chính thức sẽ được gửi sau",
+    formalInvitationText: "Thiệp mời chính thức sẽ được gửi",
+    
+    // Location
+    location: "Địa Điểm",
+    locationVenueName: "MAI HOUSE SAIGON HOTEL",
+    locationAddress: "157 Nam Kỳ Khởi Nghĩa, Phường Xuân Hòa, Thành phố Hồ Chí Minh",
+    locationTime: "Từ 17:00 đến 11:00 tối",
+    openInMaps: "Mở bản đồ",
+
     
     // RSVP
-    rsvpButton: "Xác nhận tham dự",
-    rsvpTitle: "Xác nhận tham dự",
+    rsvpMessage: "Chúng tôi rất mong được đón tiếp bạn",
+    rsvpButton: "Phúc Đáp",
+    rsvpTitle: "Phúc Đáp",
     rsvpSubtitle: "Chúng tôi rất mong được gặp bạn! Vui lòng điền form bên dưới.",
-    weddingTitle: "Đám cưới của Bảo và Hậu",
+    weddingTitle: "Bảo & Hậu's Wedding",
     findYourName: "Tìm tên của bạn",
     required: "(bắt buộc)",
     namePlaceholder: "Nhập tên như trên thiệp mời...",
@@ -109,10 +130,10 @@ export const translations = {
     selectGuests: "Chọn số lượng khách",
     other: "Khác",
     enterGuests: "Nhập số lượng khách",
-    guestNames: "Tên các khách trong đoàn của bạn",
-    dietaryPreference: "Ăn chay hay không chay",
+    guestNames: "Tên người thân đi cùng bạn",
+    dietaryPreference: "Bạn có ăn chay không?",
     vegetarian: "Ăn chay",
-    nonVegetarian: "Không chay",
+    nonVegetarian: "Ăn Mặn",
     questionsComments: "Câu hỏi hoặc lời nhắn",
     submit: "Gửi",
     submitting: "Đang gửi...",
@@ -121,19 +142,22 @@ export const translations = {
     
     // ChanceEncounter
     chanceTitle: "Kết duyên",
-    chanceP1: "Sau nhiều năm cùng nhau với những tiếng cười, những cuộc phiêu lưu và vô vàn kỷ niệm đẹp, chúng tôi cuối cùng cũng sẵn sàng bước thêm một bước nữa trong hành trình của mình.",
-    chanceP2: "Ngày này không chỉ là một lễ kỷ niệm tình yêu, mà còn là khởi đầu của một cuộc sống mới với những giấc mơ mới, những chương mới và những khoảnh khắc bất tận bên nhau.",
-    chanceP3: "Chúng tôi rất biết ơn tình yêu thương và sự ủng hộ của gia đình và bạn bè, những người đã là một phần trong câu chuyện của chúng tôi ngay từ đầu.",
-    chanceP4: "Sự hiện diện của bạn có ý nghĩa rất lớn đối với chúng tôi, và chúng tôi không thể chờ đợi để được cùng nhau kỷ niệm ngày đặc biệt này với những người chúng tôi yêu quý nhất.",
+    chanceP1: "Và rồi, sau những năm tháng đồng hành cùng nhau, tiếng cười, những chuyến đi và vô vàn kỷ niệm đáng nhớ, chúng tôi đã sẵn sàng bước sang một chặng đường mới trong hành trình của mình.",
+    chanceP2: "Ngày hôm nay không chỉ là minh chứng cho tình yêu, mà còn là khởi đầu của một trang mới — nơi có những ước mơ và những ngày tháng hạnh phúc được viết tiếp bên nhau.",
+    chanceP3: "Chúng tôi xin gửi lời biết ơn chân thành đến gia đình và bạn bè, những người đã luôn yêu thương, đồng hành và trở thành một phần ý nghĩa trong hành trình của chúng tôi ngay từ những ngày đầu.",
+    chanceP4: "Sự hiện diện của bạn trong ngày vui hôm nay là món quà vô cùng quý giá đối với chúng tôi. Chúng tôi rất mong được cùng bạn sẻ chia và lưu giữ niềm hạnh phúc trọn vẹn này.",
     
     // Events
     events: [
-      { time: "7:00 SA", title: "Lễ xin dâu" },
+      { time: "7:00 Sáng", title: "Lễ xin dâu" },
       { time: "10:00 SA", title: "Lễ xin rể" },
       { time: "1:00 CH – 4:00 CH", title: "Bữa trưa/Di chuyển & Nghỉ ngơi" },
       { time: "6:00 CH", title: "Đón khách" },
       { time: "7:00 CH", title: "Lễ thành hôn" },
     ],
+    
+    // Merge custom translations (nếu có) - override các key mặc định
+    ...customVietnameseTranslations,
   }
 };
 

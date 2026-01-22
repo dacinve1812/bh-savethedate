@@ -1329,7 +1329,7 @@
     height: 100%;
     display: grid;
     place-items: center;
-    padding: clamp(2rem, 5vw, 4rem);
+    padding: clamp(1rem, 5vw, 4rem);
     z-index: 1;
 }
 
@@ -1368,6 +1368,7 @@
     text-align: center;
     margin: 0;
     line-height: 1.6;
+    background: rgba(28, 26, 21, 0.36);
 }
 
 .rsvp__button {

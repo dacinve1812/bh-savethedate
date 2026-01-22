@@ -38,7 +38,7 @@ export const translations = {
     appleMaps: "Apple Maps",
     
     // RSVP
-    rsvpMessage: "We hope to have you join us",
+    rsvpMessage: "We would sincerely appreciate your response to facilitate our preparations.",
     rsvpButton: "RSVP",
     rsvpTitle: "RSVP",
     rsvpSubtitle: "We look forward to seeing you! Fill out form below.",
@@ -115,7 +115,7 @@ export const translations = {
 
     
     // RSVP
-    rsvpMessage: "Chúng tôi rất mong được đón tiếp bạn",
+    rsvpMessage: "Để thuận tiên cho việc sắp xếp tiệc, kính mong Quý khách vui lòng phúc đáp",
     rsvpButton: "Phúc Đáp",
     rsvpTitle: "Phúc Đáp",
     rsvpSubtitle: "Chúng tôi rất mong được gặp bạn! Vui lòng điền form bên dưới.",

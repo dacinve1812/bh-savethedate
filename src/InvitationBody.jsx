@@ -60,38 +60,49 @@ export default function InvitationBody({
     }
   }, [lightbox, onLightbox]);
 
-  // Swipe gesture state
+  // Instagram-style swipe: render 3 images simultaneously for smooth transitions
   const [dragOffset, setDragOffset] = React.useState(0);
   const [isDragging, setIsDragging] = React.useState(false);
-  const [direction, setDirection] = React.useState(0); // -1: swipe left (next), 1: swipe right (prev)
-  const prevIndexRef = React.useRef(lightbox);
+  const containerRef = React.useRef(null);
   
-  // Reset dragOffset sau khi image đã transition xong để animation mượt hơn
+  // Preload adjacent images for smooth transitions
+  React.useEffect(() => {
+    if (lightbox !== null) {
+      const preloadImages = [];
+      
+      // Preload previous image
+      if (lightbox > 0) {
+        const prevImg = new Image();
+        prevImg.src = getFullSizeImageSrc(GALLERY_IMAGES[lightbox - 1]);
+        preloadImages.push(prevImg);
+      }
+      
+      // Preload next image
+      if (lightbox < GALLERY_IMAGES.length - 1) {
+        const nextImg = new Image();
+        nextImg.src = getFullSizeImageSrc(GALLERY_IMAGES[lightbox + 1]);
+        preloadImages.push(nextImg);
+      }
+      
+      return () => {
+        // Cleanup if needed
+      };
+    }
+  }, [lightbox]);
+
+  // Reset drag offset when lightbox changes (after transition)
   React.useEffect(() => {
     if (lightbox !== null && !isDragging) {
-      // Delay để animation transition image hoàn tất trước khi reset
-      const timer = setTimeout(() => {
-        setDragOffset(0);
-      }, 400); // Match với duration của image transition (0.4s)
-      return () => clearTimeout(timer);
+      // Reset immediately when not dragging
+      setDragOffset(0);
     }
   }, [lightbox, isDragging]);
-
-  // Track direction for animation
-  React.useEffect(() => {
-    if (lightbox !== null && prevIndexRef.current !== null && prevIndexRef.current !== lightbox) {
-      setDirection(lightbox > prevIndexRef.current ? 1 : -1);
-    }
-    prevIndexRef.current = lightbox;
-  }, [lightbox]);
 
   // Handle swipe navigation
   const handleSwipeNavigation = React.useCallback((dir) => {
     if (dir === "left" && lightbox < GALLERY_IMAGES.length - 1) {
-      setDirection(1); // Next image - animate from right
       onLightbox(lightbox + 1);
     } else if (dir === "right" && lightbox > 0) {
-      setDirection(-1); // Previous image - animate from left
       onLightbox(lightbox - 1);
     }
   }, [lightbox, onLightbox]);
@@ -162,7 +173,6 @@ export default function InvitationBody({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setDirection(-1); // Previous - animate from left
                     onLightbox(lightbox - 1);
                   }}
                   className="gallery-lightbox-nav-btn gallery-lightbox-nav-btn--prev flex-shrink-0 p-2 text-white hover:text-gray-300 transition-colors z-10"
@@ -172,93 +182,123 @@ export default function InvitationBody({
                 </button>
               )}
 
-              {/* Image container with swipe support */}
-              <motion.div
-                className="relative flex items-center justify-center max-h-[90vh] touch-none"
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.2}
-                dragMomentum={false}
+              {/* Image container with Instagram-style swipe */}
+              <div
+                ref={containerRef}
+                className="relative flex items-center justify-center max-h-[90vh] w-full overflow-hidden touch-none"
                 onClick={(e) => e.stopPropagation()}
-                onDrag={(e, info) => {
-                  setDragOffset(info.offset.x);
-                  setIsDragging(true);
-                }}
-                onDragEnd={(e, info) => {
-                  setIsDragging(false);
-                  const threshold = 80; // Minimum swipe distance in pixels
-                  const velocity = info.velocity.x;
-                  
-                  // Check if swipe is significant enough (distance or velocity)
-                  if (Math.abs(info.offset.x) > threshold || Math.abs(velocity) > 400) {
-                    // Không reset dragOffset ngay - để animation transition mượt hơn
-                    // dragOffset sẽ được reset trong useEffect sau khi image đã transition xong
-                    if (info.offset.x > 0 || velocity > 0) {
-                      // Swipe right - go to previous image
-                      handleSwipeNavigation("right");
-                    } else {
-                      // Swipe left - go to next image
-                      handleSwipeNavigation("left");
-                    }
-                  } else {
-                    // Nếu không đủ threshold, reset ngay để snap back mượt mà
-                    setDragOffset(0);
-                  }
-                }}
-                style={{
-                  x: dragOffset,
-                  cursor: isDragging ? "grabbing" : "grab"
-                }}
-                animate={{
-                  x: isDragging ? dragOffset : 0,
-                }}
-                transition={{
-                  x: {
-                    type: "spring",
-                    stiffness: 400,
-                    damping: 35,
-                    duration: isDragging ? 0 : 0.35
-                  }
-                }}
               >
-                {/* Image with smooth animation */}
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.img
-                    key={lightbox}
-                    src={getFullSizeImageSrc(GALLERY_IMAGES[lightbox])}
-                    alt={GALLERY_IMAGES[lightbox]?.alt || `Gallery image ${lightbox + 1}`}
-                    className="max-h-[85vh] max-w-full w-auto rounded-sm shadow-2xl object-contain select-none pointer-events-none"
-                    draggable={false}
-                    loading="eager"
-                    initial={{ 
-                      opacity: 0, 
-                      x: direction > 0 ? 100 : direction < 0 ? -100 : 0,
-                      scale: 0.96
-                    }}
-                    animate={{ 
-                      opacity: 1, 
-                      x: 0,
-                      scale: 1
-                    }}
-                    exit={{ 
-                      opacity: 0, 
-                      x: direction > 0 ? -100 : 100,
-                      scale: 0.96
-                    }}
-                    transition={{
-                      duration: 0.4,
-                      ease: [0.25, 0.46, 0.45, 0.94] // easeOutQuad - mượt hơn
-                    }}
-                  />
-                </AnimatePresence>
-              </motion.div>
+                <motion.div
+                  className="flex items-center justify-center"
+                  drag="x"
+                  dragConstraints={{
+                    left: lightbox > 0 ? -window.innerWidth : 0,
+                    right: lightbox < GALLERY_IMAGES.length - 1 ? window.innerWidth : 0
+                  }}
+                  dragElastic={0.1}
+                  dragMomentum={true}
+                  onDrag={(e, info) => {
+                    setDragOffset(info.offset.x);
+                    setIsDragging(true);
+                  }}
+                  onDragEnd={(e, info) => {
+                    setIsDragging(false);
+                    const threshold = 100; // Lower threshold for better responsiveness
+                    const velocity = info.velocity.x;
+                    
+                    // Check if swipe is significant enough
+                    if (Math.abs(info.offset.x) > threshold || Math.abs(velocity) > 300) {
+                      if (info.offset.x > 0 || velocity > 0) {
+                        // Swipe right - go to previous
+                        handleSwipeNavigation("right");
+                      } else {
+                        // Swipe left - go to next
+                        handleSwipeNavigation("left");
+                      }
+                    } else {
+                      // Snap back to center
+                      setDragOffset(0);
+                    }
+                  }}
+                  animate={{
+                    x: dragOffset,
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30,
+                    mass: 0.5
+                  }}
+                  style={{
+                    cursor: isDragging ? "grabbing" : "grab"
+                  }}
+                >
+                  {/* Render 3 images: previous, current, next - positioned side by side */}
+                  <div className="flex items-center justify-center" style={{ position: 'relative' }}>
+                    {/* Previous image - positioned to the left */}
+                    {lightbox > 0 && (
+                      <motion.img
+                        key={`prev-${lightbox - 1}`}
+                        src={getFullSizeImageSrc(GALLERY_IMAGES[lightbox - 1])}
+                        alt={GALLERY_IMAGES[lightbox - 1]?.alt || `Gallery image ${lightbox}`}
+                        className="max-h-[85vh] max-w-[95vw] w-auto rounded-sm shadow-2xl object-contain select-none pointer-events-none"
+                        draggable={false}
+                        loading="eager"
+                        style={{
+                          position: 'absolute',
+                          left: '-100%',
+                          opacity: isDragging && dragOffset > 0 ? Math.min(1, dragOffset / 200) : 0,
+                        }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: isDragging && dragOffset > 0 ? Math.min(1, dragOffset / 200) : 0 }}
+                        transition={{ duration: 0.15 }}
+                      />
+                    )}
+                    
+                    {/* Current image - centered */}
+                    <motion.img
+                      key={`current-${lightbox}`}
+                      src={getFullSizeImageSrc(GALLERY_IMAGES[lightbox])}
+                      alt={GALLERY_IMAGES[lightbox]?.alt || `Gallery image ${lightbox + 1}`}
+                      className="max-h-[85vh] max-w-[95vw] w-auto rounded-sm shadow-2xl object-contain select-none pointer-events-none"
+                      draggable={false}
+                      loading="eager"
+                      style={{
+                        opacity: isDragging ? Math.max(0.3, 1 - Math.abs(dragOffset) / 300) : 1,
+                      }}
+                      initial={{ opacity: 1 }}
+                      animate={{ opacity: isDragging ? Math.max(0.3, 1 - Math.abs(dragOffset) / 300) : 1 }}
+                      transition={{ duration: 0.15 }}
+                    />
+                    
+                    {/* Next image - positioned to the right */}
+                    {lightbox < GALLERY_IMAGES.length - 1 && (
+                      <motion.img
+                        key={`next-${lightbox + 1}`}
+                        src={getFullSizeImageSrc(GALLERY_IMAGES[lightbox + 1])}
+                        alt={GALLERY_IMAGES[lightbox + 1]?.alt || `Gallery image ${lightbox + 2}`}
+                        className="max-h-[85vh] max-w-[95vw] w-auto rounded-sm shadow-2xl object-contain select-none pointer-events-none"
+                        draggable={false}
+                        loading="eager"
+                        style={{
+                          position: 'absolute',
+                          left: '100%',
+                          opacity: isDragging && dragOffset < 0 ? Math.min(1, Math.abs(dragOffset) / 200) : 0,
+                        }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: isDragging && dragOffset < 0 ? Math.min(1, Math.abs(dragOffset) / 200) : 0 }}
+                        transition={{ duration: 0.15 }}
+                      />
+                    )}
+                  </div>
+                </motion.div>
+              </div>
 
               {/* Next button - nằm ngoài ảnh khi có không gian */}
               {lightbox < GALLERY_IMAGES.length - 1 && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setDirection(1); // Next - animate from right
                     onLightbox(lightbox + 1);
                   }}
                   className="gallery-lightbox-nav-btn gallery-lightbox-nav-btn--next flex-shrink-0 p-2 text-white hover:text-gray-300 transition-colors z-10"

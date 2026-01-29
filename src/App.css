@@ -289,7 +289,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100vh;
+    /* height: 100vh; */
     gap: clamp(3rem, 6vw, 6rem);
     padding: clamp(4rem, 8vw, 8rem) clamp(2rem, 6vw, 8rem);
     overflow: hidden;
@@ -380,7 +380,7 @@
 @media (max-width: 1024px) {
     .chance-encounter {
         flex-direction: column;
-        height: 100vh;
+        /* height: 100dvh; */
         gap: 2.5rem;
     }
     .chance-encounter__text {
@@ -391,7 +391,7 @@
         text-align: start;
     }
     .chance-encounter__text p {
-        text-align: end;
+        text-align: match-parent;
         line-height: 1.6;
     }
     .chance-encounter__visual {
@@ -402,9 +402,9 @@
 }
 @media (max-width: 640px) {
     .chance-encounter {
-        height: auto;
+        /* height: 100dvh; */
         padding: clamp(4rem, 12vw, 5rem) clamp(1.5rem, 10vw, 3rem);
-        min-height: 850px;
+        min-height: 900px;
         gap: 1.5rem;
     }
     .chance-encounter__layer--map{
@@ -424,7 +424,7 @@
 }
 .fontchange{
     font-family:  "Hurricane", serif;
-    font-size: clamp(1.6rem, 3vw, 2rem);
+    font-size: clamp(1.2rem, 3vw, 1.8rem);
     font-weight: 100;
     color: #974e06;
     line-height: 1.2;

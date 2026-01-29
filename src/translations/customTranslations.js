@@ -56,18 +56,18 @@ export const customVietnameseTranslations = {
 
   // ChanceEncounter
   chanceTitle: "Kết Duyên",
-  chanceP1: "Sau nhiều năm cùng nhau với những tiếng cười, những cuộc phiêu lưu và vô vàn kỷ niệm đẹp, chúng tôi cuối cùng cũng sẵn sàng bước thêm một bước nữa trong hành trình của mình.",
-  chanceP2: "Ngày này không chỉ là một lễ kỷ niệm tình yêu, mà còn là khởi đầu của một cuộc sống mới với những giấc mơ mới, những chương mới và những khoảnh khắc bất tận bên nhau.",
-  chanceP3: "Chúng tôi rất biết ơn tình yêu thương và sự ủng hộ của gia đình và bạn bè, những người đã là một phần trong câu chuyện của chúng tôi ngay từ đầu.",
-  chanceP4: "Sự hiện diện của bạn có ý nghĩa rất lớn đối với chúng tôi, và chúng tôi không thể chờ đợi để được cùng nhau kỷ niệm ngày đặc biệt này với những người chúng tôi yêu quý nhất.",
+  chanceP1: "Sau <fc>nhiều năm</fc> bên nhau, ghi dấu bằng những khoảnh khắc yêu thương và kỷ niệm đẹp, hành trình này hôm nay <fc>chính thức</fc> mở ra một chương mới.",
+  chanceP2: "Ngày trọng đại này không chỉ là sự kỷ niệm của <fc>tình yêu</fc>, mà còn đánh dấu khởi đầu của một <fc>cuộc sống mới</fc> – nơi những ước mơ được sẻ chia, những trang mới được viết tiếp và những khoảnh khắc ý nghĩa sẽ mãi song hành bên nhau.",
+  chanceP3: "Xin trân trọng gửi lời <fc>tri ân</fc> sâu sắc đến gia đình và bạn bè, những người đã luôn yêu thương, đồng hành và trở thành một phần không thể thiếu trong <fc>hành trình</fc> này ngay từ những ngày đầu.",
+  chanceP4: "<fc>Sự hiện diện</fc> quý báu của quý vị là niềm vinh hạnh lớn lao, góp phần làm cho ngày vui thêm trọn vẹn và đáng nhớ.",
 
   // Events - Lưu ý: events là array, bạn cần thay thế toàn bộ array
   events: [
     { time: "7:00 Sáng", title: "Lễ Vu Quy" },
     { time: "10:00 Sáng", title: "Lễ Tân Hôn" },
     { time: "1:00 Trưa", title: "Ăn Trưa và Nghỉ Ngơi" },
-    { time: "6:00 Tôi", title: "Đón khách" },
-    { time: "7:00 Tối", title: "Tiệc tối" },
+    { time: "6:00 Tối", title: "Đón khách" },
+    { time: "7:00 Tối", title: "Lễ Cưới" },
   ],
 
   // Location - Bạn có thể tùy chỉnh thông tin địa điểm

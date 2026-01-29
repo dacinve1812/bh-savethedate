@@ -157,26 +157,36 @@ export default function RSVPPage({ showHeader = true }) {
 
       {/* Main Image Section with Overlay */}
       <section className="rsvp-page__hero">
-        <div className="rsvp-page__hero-image">
-          <div className="rsvp-page__hero-overlay">
+        <motion.div
+          className="rsvp-page__hero-image"
+          initial={{ opacity: 0, scale: 1.05 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <motion.div
+            className="rsvp-page__hero-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          >
             <motion.h1
               className="rsvp-page__hero-title"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
+              transition={{ duration: 0.75, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
             >
               {t.rsvpTitle}
             </motion.h1>
             <motion.p
               className="rsvp-page__hero-subtitle"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
+              transition={{ duration: 0.75, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
             >
               {t.rsvpSubtitle}
             </motion.p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </section>
 
       {/* Wedding Title */}

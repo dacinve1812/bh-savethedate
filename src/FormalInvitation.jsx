@@ -57,7 +57,7 @@ export default function FormalInvitation() {
                 ease: [0.25, 0.1, 0.25, 1]
               }}
             >
-              05.30.2026
+              {t.formalInvitationDate || "05.30.2026"}
             </motion.p>
             <motion.p 
               className="formal-invitation__p3"

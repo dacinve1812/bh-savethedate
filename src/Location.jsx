@@ -8,7 +8,7 @@ import { translations } from "./translations";
 const LOCATION_CONFIG = {
   venueName: "MAI HOUSE SAIGON HOTEL",
   address: "157 Nam Ky Khoi Nghia Street, Xuan Hoa Ward, Ho Chi Minh City, Vietnam",
-  time: "From 6:00 PM to 11:00 PM", // Hoặc "Từ 17:00 đến 01:00"
+  time: "From 6:00 PM to 10:00 PM", // Hoặc "Từ 17:00 đến 01:00"
   latitude: 10.78233, // Latitude của địa điểm
   longitude: 106.69178, // Longitude của địa điểm
   googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=", // Sẽ được thêm tọa độ

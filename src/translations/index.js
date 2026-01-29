@@ -27,6 +27,7 @@ export const translations = {
     
     // Formal Invitation
     formalInvitationText: "Formal invitation to follow",
+    formalInvitationDate: "05.30.2026",
     
     // Location
     location: "Location",
@@ -104,7 +105,8 @@ export const translations = {
     calendarModalTitle: "Thêm vào lịch",
     
     // Formal Invitation
-    formalInvitationText: "Thiệp mời chính thức sẽ được gửi",
+    formalInvitationText: "Thiệp mời chính thức sẽ được gửi sau.",
+    formalInvitationDate: "30.05.2026",
     
     // Location
     location: "Địa Điểm",
@@ -118,7 +120,7 @@ export const translations = {
     rsvpMessage: "Để gia đình chúng tôi có thể chuẩn bị tiệc cưới được chu toàn, kính mong Quý khách vui lòng phúc đáp.",
     rsvpButton: "Phúc Đáp",
     rsvpTitle: "Phúc Đáp",
-    rsvpSubtitle: "Hẹn gặp bạn trong ngày vui của chúng tôi. Vui lòng phản hồi qua form bên dưới",
+    rsvpSubtitle: "Hẹn gặp bạn trong ngày vui của chúng tôi. Vui lòng phản hồi qua form bên dưới.",
     weddingTitle: "Bảo & Hậu's Wedding",
     findYourName: "Tìm tên của bạn",
     required: "(bắt buộc)",

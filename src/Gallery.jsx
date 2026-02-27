@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "./contexts/LanguageContext";
 import { translations } from "./translations";
+import ImagePlaceholder from "./components/ImagePlaceholder";
 
 // ============================================
 // GALLERY IMAGES CONFIGURATION
@@ -60,8 +61,10 @@ export default function Gallery({ onOpen }) {
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
   const [loadedImages, setLoadedImages] = useState(new Set());
+  const [imageLoadingStates, setImageLoadingStates] = useState({}); // Track loading state per image
   const galleryRef = useRef(null);
   const imageRefs = useRef({});
+  const processedImagesRef = useRef(new Set()); // Track which images we've already processed
 
   // Helper functions: tự động map src sang thumbnails và fullSize
   const getImageSrc = (image) => {
@@ -167,17 +170,52 @@ export default function Gallery({ onOpen }) {
                   ease: [0.25, 0.1, 0.25, 1],
                 }}
               >
-                <div className="gallery__image-wrapper" onClick={() => onOpen(index)}>
+                <div
+                  className="gallery__image-wrapper"
+                  onClick={(e) => {
+                    const el = e.currentTarget;
+                    const r = el.getBoundingClientRect();
+                    const rect = {
+                      left: r.left,
+                      top: r.top,
+                      width: r.width,
+                      height: r.height,
+                    };
+                    onOpen(index, { rect, src: thumbnailSrc });
+                  }}
+                >
+                  {/* Placeholder - shown while image is loading */}
+                  {!imageLoadingStates[index] && (
+                    <ImagePlaceholder
+                      type="landscape"
+                      className="gallery__image-placeholder"
+                    />
+                  )}
+                  
+                  {/* Actual image */}
                   <img
                     src={thumbnailSrc}
                     data-full={shouldPreload ? fullSizeSrc : undefined}
                     data-index={index}
                     alt={image.alt || `Gallery image ${index + 1}`}
-                    className="gallery__image"
+                    className={`gallery__image ${imageLoadingStates[index] ? 'gallery__image--loaded' : 'gallery__image--loading'}`}
                     loading="lazy"
                     decoding="async"
+                    onLoad={() => {
+                      setImageLoadingStates(prev => ({ ...prev, [index]: true }));
+                    }}
+                    onError={() => {
+                      setImageLoadingStates(prev => ({ ...prev, [index]: true }));
+                    }}
                     ref={(el) => {
-                      if (el) imageRefs.current[index] = el;
+                      if (el) {
+                        imageRefs.current[index] = el;
+                        // Check if already loaded (cached) - only process once per image
+                        if (el.complete && el.naturalHeight !== 0 && !processedImagesRef.current.has(index)) {
+                          processedImagesRef.current.add(index);
+                          setImageLoadingStates(prev => ({ ...prev, [index]: true }));
+                        }
+                      }
                     }}
                   />
                 </div>

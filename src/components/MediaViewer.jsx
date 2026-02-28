@@ -266,13 +266,12 @@ export default function MediaViewer({
           const absDx = Math.abs(dx);
           const absDy = Math.abs(dy);
           if (gestureModeRef.current === null) {
-            if (absDy > absDx && dy > 0) gestureModeRef.current = "dismiss";
+            if (absDy > absDx) gestureModeRef.current = "dismiss";
             else if (absDx > absDy) gestureModeRef.current = "carousel";
           }
           if (gestureModeRef.current === "dismiss") {
-            const val = Math.max(0, dy);
-            latestDismissRef.current = val;
-            setDismissOffset(val);
+            latestDismissRef.current = dy;
+            setDismissOffset(dy);
           } else if (gestureModeRef.current === "carousel") {
             latestCarouselRef.current = dx;
             setCarouselOffset(dx);
@@ -290,7 +289,7 @@ export default function MediaViewer({
       if (touches.length >= 2) return;
 
       if (gestureModeRef.current === "dismiss") {
-        if (latestDismissRef.current >= DISMISS_THRESHOLD) {
+        if (Math.abs(latestDismissRef.current) >= DISMISS_THRESHOLD) {
           close();
         }
         latestDismissRef.current = 0;
@@ -325,11 +324,15 @@ export default function MediaViewer({
 
   const canSwipeLeft = index < total - 1;
   const canSwipeRight = index > 0;
-  const bgOpacity = Math.max(0.3, 1 - dismissOffset / 280);
-  const imageScale = Math.max(0.5, 1 - dismissOffset / 400);
+  const absDismiss = Math.abs(dismissOffset);
+  const bgOpacity = Math.max(0.3, 1 - absDismiss / 280);
+  const imageScale = 1;
   const imageY = dismissOffset * 0.6;
   const slideWidth = containerWidth > 0 ? containerWidth : viewportWidth;
-  const sheetX = -index * slideWidth + carouselOffset + (scale > 1 ? pan.x : 0);
+  const sheetX =
+    -index * slideWidth +
+    (dismissOffset !== 0 ? 0 : carouselOffset) +
+    (scale > 1 ? pan.x : 0);
   const sheetY = imageY + (scale > 1 ? pan.y : 0);
 
   return (

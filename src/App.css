@@ -1640,6 +1640,13 @@
     right: 0.75rem;
 }
 
+@media (max-width: 431px) {
+    .media-viewer-nav--prev,
+    .media-viewer-nav--next {
+        display: none;
+    }
+}
+
 .media-viewer-container {
     flex: 1;
     height: 100%;

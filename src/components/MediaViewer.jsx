@@ -1,13 +1,13 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { getOptimizedImagePaths } from "../Gallery";
 
 const getThumbnailSrc = (image) => {
   if (image?.thumbnail) return image.thumbnail;
   if (image?.src) {
     const paths = getOptimizedImagePaths(image.src);
-    return paths.thumbnail || image.src;
+    return paths.thumbnailMaxRes || paths.thumbnail || image.src;
   }
   return image?.src || "";
 };
@@ -19,6 +19,12 @@ const getFullSizeSrc = (image) => {
     return paths.fullSize || image.src;
   }
   return image?.src || "";
+};
+
+const getOriginalSrc = (image) => {
+  if (!image?.src) return null;
+  const s = image.src.startsWith("/") ? image.src : `/${image.src}`;
+  return s;
 };
 
 const MIN_SCALE = 1;
@@ -92,11 +98,17 @@ export default function MediaViewer({
   const containerRef = useRef(null);
   const lastPinchDistRef = useRef(null);
   const lastPinchScaleRef = useRef(1);
+  const lastPinchPanRef = useRef({ x: 0, y: 0 });
   const gestureModeRef = useRef(null); // 'pinch' | 'pan' | 'carousel' | 'dismiss'
   const touchStartRef = useRef({ x: 0, y: 0, scale: 1, pan: { x: 0, y: 0 } });
   const latestDismissRef = useRef(0);
   const latestCarouselRef = useRef(0);
   const onTouchMoveRef = useRef(() => {});
+  const lastTapRef = useRef({ time: 0, x: 0, y: 0 });
+  const DOUBLE_TAP_MS = 350;
+  const DOUBLE_TAP_PX = 40;
+  const TAP_MOVE_PX = 18;
+  const DOUBLE_TAP_ZOOM = 2;
 
   useEffect(() => {
     const onResize = () => setViewportWidth(window.innerWidth);
@@ -136,22 +148,24 @@ export default function MediaViewer({
   const total = images.length;
   const currentImage = images[index];
   const fullSrc = currentImage ? getFullSizeSrc(currentImage) : "";
+  const canZoom = fullResLoaded[index] === true;
 
-  // Preload all full-size images when viewer opens so every slide shows (no blank for far slides)
+  // Preload full for current slide and neighbors; start as soon as viewer is open
   useEffect(() => {
-    if (!images.length) return;
-    images.forEach((img, i) => {
-      const src = getFullSizeSrc(img);
-      if (!src) return;
-      const imgEl = new Image();
-      imgEl.onload = () =>
-        setFullResLoaded((prev) => ({ ...prev, [i]: true }));
-      imgEl.onerror = () => {
-        // Don't set loaded on error so we keep showing thumbnail placeholder
-      };
-      imgEl.src = src;
+    const toLoad = [];
+    for (let i = Math.max(0, index - 1); i <= Math.min(images.length - 1, index + 1); i++) {
+      if (images[i] && !fullResLoaded[i]) toLoad.push({ i, img: images[i] });
+    }
+    toLoad.forEach(({ i, img }) => {
+      const fullSrc = getFullSizeSrc(img);
+      if (!fullSrc) return;
+      const el = new Image();
+      el.onload = () => setFullResLoaded((prev) => ({ ...prev, [i]: true }));
+      el.onerror = () => {};
+      el.src = fullSrc;
     });
-  }, [images]);
+  }, [index, images, fullResLoaded]);
+
 
   // Notify parent when index changes (for URL sync)
   useEffect(() => {
@@ -187,6 +201,25 @@ export default function MediaViewer({
     onClose?.();
   }, [onClose]);
 
+  const downloadUrl = currentImage
+    ? getOriginalSrc(currentImage) || getFullSizeSrc(currentImage)
+    : null;
+  const downloadFilename =
+    currentImage?.src?.split("/").filter(Boolean).pop() || `image-${index + 1}.jpg`;
+
+  const downloadImage = useCallback(() => {
+    if (!downloadUrl) return;
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = downloadFilename;
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [downloadUrl, downloadFilename]);
+
+  const longPressRef = useRef({ timer: null });
+
   // Keyboard
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -220,13 +253,22 @@ export default function MediaViewer({
         gestureModeRef.current = "pinch";
         lastPinchDistRef.current = getTouchDistance(touches);
         lastPinchScaleRef.current = scale;
+        lastPinchPanRef.current = { ...pan };
+        if (longPressRef.current.timer) {
+          clearTimeout(longPressRef.current.timer);
+          longPressRef.current.timer = null;
+        }
       } else {
         gestureModeRef.current = null;
         lastPinchDistRef.current = null;
+        longPressRef.current.timer = setTimeout(() => {
+          longPressRef.current.timer = null;
+          downloadImage();
+        }, 500);
       }
       setIsDragging(true);
     },
-    [scale, pan]
+    [scale, pan, downloadImage]
   );
 
   const onTouchMove = useCallback(
@@ -238,17 +280,36 @@ export default function MediaViewer({
         const prevDist = lastPinchDistRef.current;
         if (prevDist > 0) {
           const delta = dist / prevDist;
+          const prevScale = lastPinchScaleRef.current;
+          const maxScale = canZoom ? MAX_SCALE : 1;
           const next = Math.min(
-            MAX_SCALE,
-            Math.max(MIN_SCALE, lastPinchScaleRef.current * delta)
+            maxScale,
+            Math.max(MIN_SCALE, prevScale * delta)
           );
+          // Pinch center (viewport) and slide center so zoom stays under fingers
+          const cx = (touches[0].clientX + touches[1].clientX) / 2;
+          const cy = (touches[0].clientY + touches[1].clientY) / 2;
+          const rect = containerRef.current?.getBoundingClientRect();
+          const slideCenterX = rect ? rect.left + rect.width / 2 : cx;
+          const slideCenterY = rect ? rect.top + rect.height / 2 : cy;
+          const ratio = next / prevScale;
+          const prevPan = lastPinchPanRef.current;
+          const newPanX = (cx - slideCenterX) * (1 - ratio) + prevPan.x * ratio;
+          const newPanY = (cy - slideCenterY) * (1 - ratio) + prevPan.y * ratio;
           setScale(next);
+          setPan({ x: newPanX, y: newPanY });
+          lastPinchScaleRef.current = next;
+          lastPinchPanRef.current = { x: newPanX, y: newPanY };
         }
         lastPinchDistRef.current = dist;
         return;
       }
 
       if (touches.length === 1) {
+        if (longPressRef.current.timer) {
+          clearTimeout(longPressRef.current.timer);
+          longPressRef.current.timer = null;
+        }
         const dx = touches[0].clientX - touchStartRef.current.x;
         const dy = touches[0].clientY - touchStartRef.current.y;
 
@@ -257,9 +318,12 @@ export default function MediaViewer({
             gestureModeRef.current = "pan";
           }
           if (gestureModeRef.current === "pan") {
+            const sw = containerRef.current?.clientWidth || viewportWidth;
+            const maxP = ((scale - 1) * sw) / 2;
+            const clamp = (v) => Math.max(-maxP, Math.min(maxP, v));
             setPan({
-              x: touchStartRef.current.pan.x + dx,
-              y: touchStartRef.current.pan.y + dy,
+              x: clamp(touchStartRef.current.pan.x + dx),
+              y: clamp(touchStartRef.current.pan.y + dy),
             });
           }
         } else {
@@ -279,12 +343,16 @@ export default function MediaViewer({
         }
       }
     },
-    [scale]
+    [scale, viewportWidth, canZoom]
   );
   onTouchMoveRef.current = onTouchMove;
 
   const onTouchEnd = useCallback(
     (e) => {
+      if (longPressRef.current.timer) {
+        clearTimeout(longPressRef.current.timer);
+        longPressRef.current.timer = null;
+      }
       const touches = Array.from(e.touches);
       if (touches.length >= 2) return;
 
@@ -300,6 +368,27 @@ export default function MediaViewer({
         else if (co < -SWIPE_CAROUSEL_THRESHOLD && index < total - 1) goNext();
         latestCarouselRef.current = 0;
         setCarouselOffset(0);
+      } else if (gestureModeRef.current === null && e.changedTouches?.length === 1) {
+        const end = e.changedTouches[0];
+        const dx = end.clientX - touchStartRef.current.x;
+        const dy = end.clientY - touchStartRef.current.y;
+        if (Math.abs(dx) < TAP_MOVE_PX && Math.abs(dy) < TAP_MOVE_PX) {
+          const now = Date.now();
+          const prev = lastTapRef.current;
+          const dist = Math.hypot(end.clientX - prev.x, end.clientY - prev.y);
+          if (now - prev.time < DOUBLE_TAP_MS && dist < DOUBLE_TAP_PX) {
+            setScale((s) => (s > 1 ? 1 : canZoom ? DOUBLE_TAP_ZOOM : 1));
+            setPan({ x: 0, y: 0 });
+            lastTapRef.current = { time: 0, x: 0, y: 0 };
+            gestureModeRef.current = null;
+            lastPinchDistRef.current = null;
+            lastPinchScaleRef.current = scale;
+            touchStartRef.current = { ...touchStartRef.current, pan: { x: 0, y: 0 } };
+            setIsDragging(false);
+            return;
+          }
+          lastTapRef.current = { time: now, x: end.clientX, y: end.clientY };
+        }
       }
 
       gestureModeRef.current = null;
@@ -308,32 +397,49 @@ export default function MediaViewer({
       touchStartRef.current = { ...touchStartRef.current, pan: { ...pan } };
       setIsDragging(false);
     },
-    [index, total, scale, pan, close, goPrev, goNext]
+    [index, total, scale, pan, close, goPrev, goNext, canZoom]
   );
 
-  // Mouse wheel zoom (desktop: Ctrl + wheel)
+  const onDoubleTapZoom = useCallback(() => {
+    setScale((s) => (s > 1 ? 1 : canZoom ? DOUBLE_TAP_ZOOM : 1));
+    setPan({ x: 0, y: 0 });
+    setCarouselOffset(0);
+  }, [canZoom]);
+
+  // Mouse wheel zoom (desktop: Ctrl + wheel) – pan compensation so zoom stays at container center
   const onWheel = useCallback(
     (e) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.15 : 0.15;
-      setScale((s) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s + delta)));
+      setScale((s) => {
+        let next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, s + delta));
+        if (!canZoom && next > 1) next = 1;
+        if (next === s) return s;
+        const ratio = next / s;
+        setPan((p) => ({ x: p.x * ratio, y: p.y * ratio }));
+        return next;
+      });
     },
-    []
+    [canZoom]
   );
 
   const canSwipeLeft = index < total - 1;
   const canSwipeRight = index > 0;
   const absDismiss = Math.abs(dismissOffset);
   const bgOpacity = Math.max(0.3, 1 - absDismiss / 280);
-  const imageScale = 1;
   const imageY = dismissOffset * 0.6;
   const slideWidth = containerWidth > 0 ? containerWidth : viewportWidth;
+  const maxPan = scale > 1 ? ((scale - 1) * slideWidth) / 2 : 0;
+  const clampedPan = {
+    x: Math.max(-maxPan, Math.min(maxPan, pan.x)),
+    y: Math.max(-maxPan, Math.min(maxPan, pan.y)),
+  };
+  // Layer 1 – carousel only: no scale on sheet
   const sheetX =
     -index * slideWidth +
-    (dismissOffset !== 0 ? 0 : carouselOffset) +
-    (scale > 1 ? pan.x : 0);
-  const sheetY = imageY + (scale > 1 ? pan.y : 0);
+    (dismissOffset !== 0 ? 0 : scale > 1 ? 0 : carouselOffset);
+  const sheetY = imageY;
 
   return (
     <motion.div
@@ -391,6 +497,17 @@ export default function MediaViewer({
           <X size={28} />
         </button>
 
+        {downloadUrl && (
+          <button
+            type="button"
+            className="media-viewer-download"
+            onClick={downloadImage}
+            aria-label="Download"
+          >
+            <Download size={24} />
+          </button>
+        )}
+
         {canSwipeRight && (
           <button
             type="button"
@@ -420,6 +537,7 @@ export default function MediaViewer({
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
           onTouchCancel={onTouchEnd}
+          onDoubleClick={onDoubleTapZoom}
           onClick={(e) => e.stopPropagation()}
           style={{
             touchAction: "none",
@@ -436,7 +554,6 @@ export default function MediaViewer({
             animate={{
               x: sheetX,
               y: sheetY,
-              scale: imageScale * scale,
             }}
             transition={{
               type: "spring",
@@ -448,7 +565,10 @@ export default function MediaViewer({
             {images.map((img, i) => {
               const thumb = getThumbnailSrc(img);
               const full = getFullSizeSrc(img);
-              const loaded = fullResLoaded[i];
+              const fullLoaded = fullResLoaded[i];
+              const inRange = Math.abs(i - index) <= 1;
+              const shouldLoadFull = fullLoaded || inRange;
+              const isActive = i === index;
               return (
                 <div
                   key={i}
@@ -459,35 +579,63 @@ export default function MediaViewer({
                     maxWidth: slideWidth,
                   }}
                 >
-                  {!loaded && (
-                    <div className="media-viewer-placeholder">
-                      <div className="media-viewer-placeholder__shimmer" />
-                      <img
-                        src={thumb}
-                        alt=""
-                        className="media-viewer-thumb"
-                        draggable={false}
-                      />
-                    </div>
-                  )}
-                  <img
-                    src={full}
-                    alt={img?.alt || `Image ${i + 1}`}
-                    className="media-viewer-full"
-                    draggable={false}
-                    loading="eager"
-                    onLoad={() =>
-                      setFullResLoaded((prev) => ({ ...prev, [i]: true }))
+                  <motion.div
+                    className="media-viewer-slide-zoom"
+                    initial={false}
+                    animate={
+                      isActive
+                        ? {
+                            x: clampedPan.x,
+                            y: clampedPan.y,
+                            scale,
+                          }
+                        : { x: 0, y: 0, scale: 1 }
                     }
-                    onError={() => {
-                      // Keep showing thumbnail; don't mark full as loaded
+                    transition={{
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 35,
+                      mass: 0.6,
                     }}
                     style={{
-                      opacity: loaded ? 1 : 0,
-                      position: loaded ? "relative" : "absolute",
-                      inset: 0,
+                      transformOrigin: "center center",
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
-                  />
+                  >
+                    {!fullLoaded && (
+                      <div className="media-viewer-placeholder">
+                        <div className="media-viewer-placeholder__shimmer" />
+                        <img
+                          src={thumb}
+                          alt=""
+                          className="media-viewer-thumb"
+                          draggable={false}
+                        />
+                      </div>
+                    )}
+                    <img
+                      src={shouldLoadFull ? full : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"}
+                      alt={img?.alt || `Image ${i + 1}`}
+                      className="media-viewer-full"
+                      draggable={false}
+                      loading="lazy"
+                      onLoad={(e) => {
+                        if (fullResLoaded[i]) return;
+                        if (e.target.currentSrc && e.target.currentSrc.includes("/images/full/"))
+                          setFullResLoaded((prev) => ({ ...prev, [i]: true }));
+                      }}
+                      onError={() => {}}
+                      style={{
+                        opacity: fullLoaded ? 1 : 0,
+                        position: fullLoaded ? "relative" : "absolute",
+                        inset: 0,
+                      }}
+                    />
+                  </motion.div>
                 </div>
               );
             })}
@@ -498,6 +646,11 @@ export default function MediaViewer({
         <div className="media-viewer-counter" aria-live="polite">
           {index + 1} / {total}
         </div>
+        {!canZoom && currentImage && (
+          <div className="media-viewer-hd-loading" aria-live="polite">
+            Đang tải HD…
+          </div>
+        )}
     </motion.div>
   );
 }

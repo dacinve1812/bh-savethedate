@@ -189,13 +189,23 @@ export default function RSVPPage({ showHeader = true }) {
         </motion.div>
       </section>
 
-      {/* Wedding Title */}
-      <section className="rsvp-page__title-section">
+      {/* Wedding Title – fade in sau khi chuyển page */}
+      <motion.section
+        className="rsvp-page__title-section"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+      >
         <h2 className="rsvp-page__wedding-title">{t.weddingTitle}</h2>
-      </section>
+      </motion.section>
 
-      {/* RSVP Form */}
-      <section className="rsvp-page__form-section">
+      {/* RSVP Form – fade in sau khi chuyển page */}
+      <motion.section
+        className="rsvp-page__form-section"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+      >
         <form className="rsvp-page__form" onSubmit={handleSubmit}>
           <div className="rsvp-page__form-group rsvp-page__typeahead" ref={typeaheadRef}>
             <label htmlFor="fullName" className="rsvp-page__label">
@@ -389,7 +399,7 @@ export default function RSVPPage({ showHeader = true }) {
             {isSubmitting ? t.submitting : t.submit}
           </button>
         </form>
-      </section>
+      </motion.section>
     </div>
   );
 }

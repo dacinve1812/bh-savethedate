@@ -10,7 +10,7 @@ import FormalInvitation from "./FormalInvitation";
 import Location from "./Location";
 import RSVP from "./RSVP";
 import RSVPPage from "./RSVPPage";
-import Gallery, { GALLERY_IMAGES } from "./Gallery";
+import Gallery, { useEffectiveGalleryImages } from "./Gallery";
 import MediaViewer from "./components/MediaViewer";
 
 export default function InvitationBody({
@@ -29,6 +29,8 @@ export default function InvitationBody({
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [tab]);
 
+  const galleryImages = useEffectiveGalleryImages();
+  const [scrollToIndex, setScrollToIndex] = React.useState(null);
   const lightboxIndex =
     lightbox == null
       ? null
@@ -56,7 +58,7 @@ export default function InvitationBody({
       const photoMatch = raw.match(/^gallery\/photo\/(\d+)$/);
       if (photoMatch) {
         const n = parseInt(photoMatch[1], 10);
-        if (n >= 0 && n < GALLERY_IMAGES.length) {
+        if (n >= 0 && n < galleryImages.length) {
           onTabChange("gallery");
           onLightbox(n);
           return;
@@ -102,6 +104,9 @@ export default function InvitationBody({
           ) : tab === "gallery" ? (
             <Gallery
               key="gallery"
+              images={galleryImages}
+              scrollToIndex={scrollToIndex}
+              onScrollToComplete={() => setScrollToIndex(null)}
               onOpen={(index, meta) => {
                 if (meta?.rect != null && meta?.src != null) {
                   onLightbox({ index, origin: { rect: meta.rect, src: meta.src } });
@@ -123,8 +128,12 @@ export default function InvitationBody({
             initialIndex={lightboxIndex}
             originRect={lightboxOrigin?.rect ?? null}
             originSrc={lightboxOrigin?.src ?? null}
-            images={GALLERY_IMAGES}
-            onClose={() => onLightbox(null)}
+            images={galleryImages}
+            onClose={() => {
+              const idx = lightboxIndex;
+              onLightbox(null);
+              if (typeof idx === "number" && idx >= 0) setScrollToIndex(idx);
+            }}
             onIndexChange={(i) => onLightbox(i)}
           />
         )}

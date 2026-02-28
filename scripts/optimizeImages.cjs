@@ -24,7 +24,9 @@ const CONFIG = {
   fallbackInputDir: path.join(__dirname, '../public'),
   thumbnailsDir: path.join(__dirname, '../public/images/thumbnails'),
   fullDir: path.join(__dirname, '../public/images/full'),
-  thumbnailWidth: 600,
+  // 4 size: 240/400/600/800 — tại 432px 50vw≈216px, DPR3 cần 648px nên cần 800w
+  thumbnailWidths: [240, 400, 600, 800],
+  thumbnailFormat: 'webp',
   thumbnailQuality: 80,
   fullQuality: 85,
   supportedFormats: ['.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG']
@@ -42,7 +44,7 @@ async function ensureDirectory(dir) {
 
 async function optimizeImage(inputPath, outputPath, options) {
   try {
-    const { width, quality, format = 'jpeg' } = options;
+    const { width, quality, format = 'jpeg', sharpen } = options;
     
     let pipeline = sharp(inputPath);
     
@@ -51,6 +53,9 @@ async function optimizeImage(inputPath, outputPath, options) {
         withoutEnlargement: true,
         fit: 'inside'
       });
+    }
+    if (sharpen) {
+      pipeline = pipeline.sharpen(); // Nhẹ, giúp thumb nét hơn ở cùng dung lượng
     }
     
     if (format === 'jpeg') {
@@ -97,22 +102,19 @@ async function getFileModifiedTime(filePath) {
 
 /**
  * Kiểm tra xem ảnh đã được optimize chưa
- * Returns true nếu cả thumbnail và full-size đều tồn tại và mới hơn (hoặc bằng) input file
+ * Returns true nếu tất cả thumbnail variants + full-size tồn tại và mới hơn (hoặc bằng) input
  */
-async function isImageAlreadyOptimized(inputPath, thumbnailPath, fullPath) {
+async function isImageAlreadyOptimized(inputPath, thumbnailPaths, fullPath) {
   try {
     const inputTime = await getFileModifiedTime(inputPath);
-    const thumbnailTime = await getFileModifiedTime(thumbnailPath);
     const fullTime = await getFileModifiedTime(fullPath);
-    
-    // Nếu cả 2 output files đều tồn tại và mới hơn (hoặc bằng) input file
-    if (thumbnailTime >= inputTime && fullTime >= inputTime) {
-      return true;
+    if (fullTime < inputTime) return false;
+    for (const thumbPath of thumbnailPaths) {
+      const t = await getFileModifiedTime(thumbPath);
+      if (t < inputTime) return false;
     }
-    
-    return false;
+    return true;
   } catch {
-    // Nếu không kiểm tra được (file không tồn tại), return false
     return false;
   }
 }
@@ -212,50 +214,52 @@ async function processImages() {
     const baseName = path.parse(relativePath).name;
     const ext = path.parse(relativePath).ext.toLowerCase();
     
-    // Output filenames (convert to .jpg for thumbnails)
-    // Giữ tên file gốc để tránh conflict nếu có nhiều ảnh cùng tên ở các thư mục khác nhau
+    // Output: 3 thumbnail sizes (240/400/600) + full
     const safeBaseName = relativePath.replace(/[^a-zA-Z0-9]/g, '_').replace(/\.[^/.]+$/, '');
-    const thumbnailName = `${safeBaseName}.jpg`;
+    const thumbExt = CONFIG.thumbnailFormat === 'webp' ? '.webp' : '.jpg';
+    const thumbnailPaths = CONFIG.thumbnailWidths.map(w =>
+      path.join(CONFIG.thumbnailsDir, `${safeBaseName}-${w}${thumbExt}`)
+    );
     const fullName = `${safeBaseName}${ext === '.png' ? '.png' : '.jpg'}`;
-    
-    const thumbnailPath = path.join(CONFIG.thumbnailsDir, thumbnailName);
     const optimizedFullPath = path.join(CONFIG.fullDir, fullName);
     
     try {
-      // Get original file size
       const originalSize = parseFloat(await getFileSize(inputImagePath));
       stats.totalOriginalSize += originalSize;
       
-      // Kiểm tra xem đã được optimize chưa
-      const alreadyOptimized = await isImageAlreadyOptimized(inputImagePath, thumbnailPath, optimizedFullPath);
+      const alreadyOptimized = await isImageAlreadyOptimized(inputImagePath, thumbnailPaths, optimizedFullPath);
       
       if (alreadyOptimized) {
-        // Đã được optimize rồi, skip và load stats từ files đã có
-        const thumbSize = parseFloat(await getFileSize(thumbnailPath));
-        const fullSize = parseFloat(await getFileSize(optimizedFullPath));
-        stats.totalThumbnailSize += thumbSize;
-        stats.totalFullSize += fullSize;
+        for (const p of thumbnailPaths) {
+          stats.totalThumbnailSize += parseFloat(await getFileSize(p));
+        }
+        stats.totalFullSize += parseFloat(await getFileSize(optimizedFullPath));
         skippedCount++;
         console.log(`⏭️  Skipped (already optimized): ${relativePath} (${originalSize} MB)`);
-        console.log(`   ✓ Thumbnail: ${thumbnailName} (${thumbSize} MB)`);
-        console.log(`   ✓ Full-size: ${fullName} (${fullSize} MB)\n`);
+        console.log(`   ✓ Thumbnails: ${CONFIG.thumbnailWidths.join('w/')}${thumbExt}`);
+        console.log(`   ✓ Full-size: ${fullName}\n`);
         continue;
       }
       
       console.log(`Processing: ${relativePath} (${originalSize} MB)`);
       
-      // Generate thumbnail
-      const thumbSuccess = await optimizeImage(inputImagePath, thumbnailPath, {
-        width: CONFIG.thumbnailWidth,
-        quality: CONFIG.thumbnailQuality,
-        format: 'jpeg'
-      });
-      
-      if (thumbSuccess) {
-        const thumbSize = parseFloat(await getFileSize(thumbnailPath));
-        stats.totalThumbnailSize += thumbSize;
-        console.log(`  ✓ Thumbnail: ${thumbnailName} (${thumbSize} MB)`);
+      let allThumbOk = true;
+      for (let i = 0; i < CONFIG.thumbnailWidths.length; i++) {
+        const w = CONFIG.thumbnailWidths[i];
+        const outPath = thumbnailPaths[i];
+        const ok = await optimizeImage(inputImagePath, outPath, {
+          width: w,
+          quality: CONFIG.thumbnailQuality,
+          format: CONFIG.thumbnailFormat,
+          sharpen: true
+        });
+        if (ok) {
+          const sz = parseFloat(await getFileSize(outPath));
+          stats.totalThumbnailSize += sz;
+          console.log(`  ✓ Thumb ${w}w: ${path.basename(outPath)} (${(sz * 1024).toFixed(0)} KB)`);
+        } else allThumbOk = false;
       }
+      const thumbSuccess = allThumbOk;
       
       // Optimize full-size
       const fullSuccess = await optimizeImage(inputImagePath, optimizedFullPath, {
@@ -271,7 +275,7 @@ async function processImages() {
         if (thumbSuccess && fullSuccess) {
           successCount++;
           const reduction = ((originalSize - optimizedSize) / originalSize * 100).toFixed(1);
-          console.log(`  📊 Size reduction: ${reduction}%\n`);
+          console.log(`  📊 Full size reduction: ${reduction}%\n`);
         }
       }
       
@@ -305,11 +309,33 @@ async function processImages() {
   
   console.log('\n💡 Tip: Script automatically skips already-optimized images');
   console.log('   (checks if output files are newer than or equal to input file)');
-  console.log('\n📝 Next steps:');
-  console.log('  1. Update GALLERY_IMAGES in Gallery.jsx with your image filenames');
-  console.log('  2. Example format:');
-  console.log('     { src: "/filename.jpg", alt: "Description" }');
+
+  // Tự động sinh danh sách gallery từ ảnh đã có trong original/ (hoặc public/)
+  await writeGalleryList(files);
+
   console.log('\n');
+}
+
+/**
+ * Ghi file src/galleryImages.generated.js – Gallery.jsx import từ đây, không cần gõ tay.
+ * Mọi ảnh trong public/images/original/ (hoặc public/) sẽ tự động có trong gallery.
+ */
+async function writeGalleryList(files) {
+  const outPath = path.join(__dirname, '../src/galleryImages.generated.js');
+  const sorted = [...files].sort((a, b) => path.basename(a.relativePath).localeCompare(path.basename(b.relativePath)));
+  const entries = sorted.map(({ relativePath }) => {
+    const base = path.basename(relativePath);
+    const name = path.parse(relativePath).name;
+    return { src: `/${base}`, alt: name };
+  });
+  const content = `/**
+ * Auto-generated by scripts/optimizeImages.cjs – do not edit by hand.
+ * Thêm ảnh vào public/images/original/ rồi chạy: npm run optimize-images
+ */
+export const GALLERY_IMAGES = ${JSON.stringify(entries, null, 2)};
+`;
+  await fs.writeFile(outPath, content, 'utf8');
+  console.log(`\n📋 Gallery list updated: src/galleryImages.generated.js (${entries.length} image(s))`);
 }
 
 // Run the script

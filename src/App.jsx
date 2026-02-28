@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import envelopeImg from "../public/envelope.png"; // ảnh envelope nội bộ
 import InvitationBody from "./InvitationBody";
 import RSVPPage from "./RSVPPage";
+import AdminGalleryPage from "./pages/AdminGalleryPage";
 import MusicPlayer from "./MusicPlayer";
 import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
 import LanguageSelector from "./components/LanguageSelector";
@@ -34,6 +35,7 @@ export default function WeddingSite() {
     <Router>
       <Routes>
           <Route path="/rsvp" element={<RSVPPageWithMusic />} />
+        <Route path="/admin" element={<AdminGalleryPage />} />
         <Route path="*" element={<HomePage />} />
       </Routes>
     </Router>

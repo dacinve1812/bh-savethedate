@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { ChevronUp, ChevronDown, Trash2, Copy, RotateCcw, ArrowLeft, Plus, LogOut } from "lucide-react";
 import { GALLERY_IMAGES as ALL_IMAGES } from "../galleryImages.generated";
@@ -231,20 +231,76 @@ function AdminGalleryContent({ onLogout }) {
   );
 }
 
+const MASONRY_ROW_HEIGHT_PX = 8;
+
 function AdminGalleryTile({ src, index, total, onMoveUp, onMoveDown, onRemove }) {
   const paths = getOptimizedImagePaths(src);
   const thumbSrc = paths?.thumbnail || src;
   const canMoveUp = index > 0;
   const canMoveDown = index < total - 1;
 
+  const contentRef = useRef(null);
+  const [rowSpan, setRowSpan] = useState(400);
+  const rafRef = useRef(null);
+
+  const recalcSpan = useCallback(() => {
+    const wrapper = contentRef.current;
+    if (!wrapper) return;
+    const grid = wrapper.closest(".gallery__masonry");
+    const rowGapPx = grid ? parseFloat(getComputedStyle(grid).rowGap) || 0 : 0;
+    const h = wrapper.getBoundingClientRect().height;
+    if (h <= 0) return;
+    const unit = MASONRY_ROW_HEIGHT_PX + rowGapPx;
+    const span = Math.max(1, Math.ceil((h + rowGapPx) / unit));
+    setRowSpan(span);
+  }, []);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const scheduleRecalc = () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        recalcSpan();
+      });
+    };
+    const ro = new ResizeObserver(scheduleRecalc);
+    ro.observe(el);
+    scheduleRecalc();
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      ro.disconnect();
+    };
+  }, [recalcSpan]);
+
+  const handleImageLoad = useCallback(
+    (e) => {
+      const img = e.target;
+      const wrapper = contentRef.current;
+      if (wrapper && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        wrapper.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+        requestAnimationFrame(() => recalcSpan());
+      }
+    },
+    [recalcSpan]
+  );
+
   return (
-    <div className="gallery__item admin-gallery__item">
-      <div className="gallery__image-wrapper admin-gallery__tile-wrapper">
+    <div
+      className="gallery__item admin-gallery__item"
+      style={{ gridRowEnd: `span ${rowSpan}` }}
+    >
+      <div
+        ref={contentRef}
+        className="gallery__image-wrapper admin-gallery__tile-wrapper"
+      >
         <img
           src={thumbSrc}
           alt=""
           className="gallery__image gallery__image--loaded"
           draggable={false}
+          onLoad={handleImageLoad}
         />
         <div className="admin-gallery__tile-overlay">
           <div className="admin-gallery__order-btns">

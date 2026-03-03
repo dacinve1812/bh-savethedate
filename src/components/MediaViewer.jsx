@@ -141,8 +141,15 @@ export default function MediaViewer({
       onTouchMoveRef.current(e);
       if (e.cancelable) e.preventDefault();
     };
+    const handleTouchStart = (e) => {
+      if (e.touches.length === 1 && e.cancelable) e.preventDefault();
+    };
     el.addEventListener("touchmove", handleTouchMove, { passive: false });
-    return () => el.removeEventListener("touchmove", handleTouchMove);
+    el.addEventListener("touchstart", handleTouchStart, { passive: false });
+    return () => {
+      el.removeEventListener("touchmove", handleTouchMove);
+      el.removeEventListener("touchstart", handleTouchStart);
+    };
   }, []);
 
   const total = images.length;
@@ -218,8 +225,6 @@ export default function MediaViewer({
     document.body.removeChild(link);
   }, [downloadUrl, downloadFilename]);
 
-  const longPressRef = useRef({ timer: null });
-
   // Keyboard
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -254,21 +259,13 @@ export default function MediaViewer({
         lastPinchDistRef.current = getTouchDistance(touches);
         lastPinchScaleRef.current = scale;
         lastPinchPanRef.current = { ...pan };
-        if (longPressRef.current.timer) {
-          clearTimeout(longPressRef.current.timer);
-          longPressRef.current.timer = null;
-        }
       } else {
         gestureModeRef.current = null;
         lastPinchDistRef.current = null;
-        longPressRef.current.timer = setTimeout(() => {
-          longPressRef.current.timer = null;
-          downloadImage();
-        }, 500);
       }
       setIsDragging(true);
     },
-    [scale, pan, downloadImage]
+    [scale, pan]
   );
 
   const onTouchMove = useCallback(
@@ -306,10 +303,6 @@ export default function MediaViewer({
       }
 
       if (touches.length === 1) {
-        if (longPressRef.current.timer) {
-          clearTimeout(longPressRef.current.timer);
-          longPressRef.current.timer = null;
-        }
         const dx = touches[0].clientX - touchStartRef.current.x;
         const dy = touches[0].clientY - touchStartRef.current.y;
 
@@ -329,7 +322,9 @@ export default function MediaViewer({
         } else {
           const absDx = Math.abs(dx);
           const absDy = Math.abs(dy);
-          if (gestureModeRef.current === null) {
+          const totalMove = Math.hypot(dx, dy);
+          // Chỉ coi là swipe khi di chuyển vượt ngưỡng → double-tap không bị nhầm thành carousel/dismiss
+          if (gestureModeRef.current === null && totalMove > TAP_MOVE_PX) {
             if (absDy > absDx) gestureModeRef.current = "dismiss";
             else if (absDx > absDy) gestureModeRef.current = "carousel";
           }
@@ -349,10 +344,6 @@ export default function MediaViewer({
 
   const onTouchEnd = useCallback(
     (e) => {
-      if (longPressRef.current.timer) {
-        clearTimeout(longPressRef.current.timer);
-        longPressRef.current.timer = null;
-      }
       const touches = Array.from(e.touches);
       if (touches.length >= 2) return;
 
@@ -588,8 +579,9 @@ export default function MediaViewer({
                             x: clampedPan.x,
                             y: clampedPan.y,
                             scale,
+                            opacity: 1,
                           }
-                        : { x: 0, y: 0, scale: 1 }
+                        : { x: 0, y: 0, scale: 1, opacity: 1 }
                     }
                     transition={{
                       type: "spring",
@@ -604,6 +596,7 @@ export default function MediaViewer({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      opacity: 1,
                     }}
                   >
                     {!fullLoaded && (

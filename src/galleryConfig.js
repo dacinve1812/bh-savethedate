@@ -1,5 +1,4 @@
 export const GALLERY_ORDER = [
-    "/chance-photo-2.jpg",
     "/DSC00154.JPG",
     "/DSC00165.JPG",
     "/DSC00178.JPG",
@@ -90,7 +89,5 @@ export const GALLERY_ORDER = [
     "/NP__8726.JPG",
     "/NP__8891.JPG",
     "/NP__8895.JPG",
-    "/NP__8896.JPG",
-    "/photo1.jpg",
-    "/photo2-2.jpg"
+    "/NP__8896.JPG"
   ];

@@ -6,9 +6,10 @@ import { translations } from "./translations";
 // ============================================
 // GALLERY IMAGES – tự động + cấu hình chọn/sắp xếp
 // ============================================
-// - galleryImages.generated.js: tất cả ảnh trong public/images/original/
+// - galleryImages.generated.js: tất cả ảnh trong public/images/original/ (sau npm run optimize-images)
 // - galleryConfig.js: GALLERY_ORDER – thứ tự mặc định (file).
 // - localStorage "gallery_order": thứ tự từ trang Admin (ưu tiên nếu có).
+// Ảnh mới có trong .generated nhưng chưa nằm trong order → tự nối vào cuối (không cần sửa galleryConfig).
 import { GALLERY_IMAGES as ALL_IMAGES } from "./galleryImages.generated";
 import { GALLERY_ORDER } from "./galleryConfig";
 
@@ -31,9 +32,19 @@ function getStoredOrder() {
   }
 }
 
-function buildListFromOrder(order) {
+/** Order + mọi src trong generated chưa có trong order (chỉ khi dùng GALLERY_ORDER mặc định — không áp dụng khi Admin đã lưu localStorage). */
+function mergeOrderWithAllImages(order) {
+  if (!order || order.length === 0) return null;
+  const seen = new Set(order);
+  const extras = ALL_IMAGES.map((img) => img.src).filter((src) => !seen.has(src));
+  return extras.length ? [...order, ...extras] : order;
+}
+
+function buildListFromOrder(order, { mergeNewFromGenerated = true } = {}) {
   if (!order || order.length === 0) return ALL_IMAGES;
-  return order.map(
+  const merged = mergeNewFromGenerated ? mergeOrderWithAllImages(order) : null;
+  const srcList = merged ?? order;
+  return srcList.map(
     (src) =>
       ALL_IMAGES.find((img) => img.src === src) || {
         src,
@@ -42,9 +53,12 @@ function buildListFromOrder(order) {
   );
 }
 
-const GALLERY_IMAGES = buildListFromOrder(
-  (typeof window !== "undefined" ? getStoredOrder() : null) || GALLERY_ORDER
-);
+const _storedOrderOnLoad =
+  typeof window !== "undefined" ? getStoredOrder() : null;
+const _initialOrder = _storedOrderOnLoad || GALLERY_ORDER;
+const GALLERY_IMAGES = buildListFromOrder(_initialOrder, {
+  mergeNewFromGenerated: typeof window === "undefined" || _storedOrderOnLoad == null,
+});
 
 export { GALLERY_IMAGES, STORAGE_KEY };
 
@@ -61,9 +75,11 @@ export function useEffectiveGalleryImages() {
     };
   }, []);
   const effectiveOrder = order ?? GALLERY_ORDER;
+  const mergeNewFromGenerated = order == null;
   return useMemo(
-    () => buildListFromOrder(effectiveOrder),
-    [effectiveOrder?.join(",")]
+    () =>
+      buildListFromOrder(effectiveOrder, { mergeNewFromGenerated }),
+    [effectiveOrder?.join(","), mergeNewFromGenerated]
   );
 }
 

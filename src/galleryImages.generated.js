@@ -4,6 +4,14 @@
  */
 export const GALLERY_IMAGES = [
   {
+    "src": "/chance-photo-1.jpg",
+    "alt": "chance-photo-1"
+  },
+  {
+    "src": "/chance-photo-2.jpg",
+    "alt": "chance-photo-2"
+  },
+  {
     "src": "/DSC00154.JPG",
     "alt": "DSC00154"
   },
@@ -86,6 +94,30 @@ export const GALLERY_IMAGES = [
   {
     "src": "/DSC01135.JPG",
     "alt": "DSC01135"
+  },
+  {
+    "src": "/DSC01235_(2).JPG",
+    "alt": "DSC01235_(2)"
+  },
+  {
+    "src": "/DSC01356_(2).JPG",
+    "alt": "DSC01356_(2)"
+  },
+  {
+    "src": "/DSC01727_(2).JPG",
+    "alt": "DSC01727_(2)"
+  },
+  {
+    "src": "/DSC01735_(2).JPG",
+    "alt": "DSC01735_(2)"
+  },
+  {
+    "src": "/DSC01771_(2).JPG",
+    "alt": "DSC01771_(2)"
+  },
+  {
+    "src": "/DSC01947_(2).JPG",
+    "alt": "DSC01947_(2)"
   },
   {
     "src": "/DSC02125.JPG",
@@ -308,16 +340,16 @@ export const GALLERY_IMAGES = [
     "alt": "NP__7930"
   },
   {
+    "src": "/NP__7935.JPG",
+    "alt": "NP__7935"
+  },
+  {
     "src": "/NP__7943.JPG",
     "alt": "NP__7943"
   },
   {
     "src": "/NP__7962.JPG",
     "alt": "NP__7962"
-  },
-  {
-    "src": "/NP__7990_(2).JPG",
-    "alt": "NP__7990_(2)"
   },
   {
     "src": "/NP__8063_(2).JPG",
@@ -332,16 +364,44 @@ export const GALLERY_IMAGES = [
     "alt": "NP__8164_(2)"
   },
   {
-    "src": "/NP__8237_(2).JPG",
-    "alt": "NP__8237_(2)"
-  },
-  {
     "src": "/NP__8313_(2).JPG",
     "alt": "NP__8313_(2)"
   },
   {
     "src": "/NP__8381_(2).JPG",
     "alt": "NP__8381_(2)"
+  },
+  {
+    "src": "/NP__8505_(2).JPG",
+    "alt": "NP__8505_(2)"
+  },
+  {
+    "src": "/NP__8509_(2).JPG",
+    "alt": "NP__8509_(2)"
+  },
+  {
+    "src": "/NP__8522_(2).JPG",
+    "alt": "NP__8522_(2)"
+  },
+  {
+    "src": "/NP__8527_(2).JPG",
+    "alt": "NP__8527_(2)"
+  },
+  {
+    "src": "/NP__8618_(2).JPG",
+    "alt": "NP__8618_(2)"
+  },
+  {
+    "src": "/NP__8638_(2).JPG",
+    "alt": "NP__8638_(2)"
+  },
+  {
+    "src": "/NP__8652_(2).JPG",
+    "alt": "NP__8652_(2)"
+  },
+  {
+    "src": "/NP__8678_(2).JPG",
+    "alt": "NP__8678_(2)"
   },
   {
     "src": "/NP__8705.JPG",
@@ -366,5 +426,13 @@ export const GALLERY_IMAGES = [
   {
     "src": "/NP__8896.JPG",
     "alt": "NP__8896"
+  },
+  {
+    "src": "/photo1.jpg",
+    "alt": "photo1"
+  },
+  {
+    "src": "/photo2-2.jpg",
+    "alt": "photo2-2"
   }
 ];

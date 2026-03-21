@@ -17,6 +17,8 @@ const sharp = require('sharp');
 const fs = require('fs').promises;
 const path = require('path');
 
+const FORCE_REGEN = process.argv.includes('--force');
+
 // Configuration
 const CONFIG = {
   // Input: ưu tiên public/images/original, nếu không có thì dùng public/
@@ -100,18 +102,47 @@ async function getFileModifiedTime(filePath) {
   }
 }
 
+async function pathExists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Cần tạo lại output nếu chưa có, rỗng, hoặc cũ hơn file gốc */
+async function needsOutputRegeneration(outputPath, inputTimeMs) {
+  if (!(await pathExists(outputPath))) return true;
+  try {
+    const st = await fs.stat(outputPath);
+    if (st.size === 0) return true;
+    return st.mtimeMs < inputTimeMs;
+  } catch {
+    return true;
+  }
+}
+
 /**
  * Kiểm tra xem ảnh đã được optimize chưa
- * Returns true nếu tất cả thumbnail variants + full-size tồn tại và mới hơn (hoặc bằng) input
+ * Returns true nếu tất cả thumbnail variants + full-size tồn tại, không rỗng, và mới hơn (hoặc bằng) input
  */
 async function isImageAlreadyOptimized(inputPath, thumbnailPaths, fullPath) {
+  if (FORCE_REGEN) return false;
   try {
     const inputTime = await getFileModifiedTime(inputPath);
-    const fullTime = await getFileModifiedTime(fullPath);
-    if (fullTime < inputTime) return false;
+    if (!inputTime) return false;
+
+    if (!(await pathExists(fullPath))) return false;
+    const fullStat = await fs.stat(fullPath);
+    if (fullStat.size === 0) return false;
+    if (fullStat.mtimeMs < inputTime) return false;
+
     for (const thumbPath of thumbnailPaths) {
-      const t = await getFileModifiedTime(thumbPath);
-      if (t < inputTime) return false;
+      if (!(await pathExists(thumbPath))) return false;
+      const st = await fs.stat(thumbPath);
+      if (st.size === 0) return false;
+      if (st.mtimeMs < inputTime) return false;
     }
     return true;
   } catch {
@@ -147,6 +178,9 @@ async function findImagesInDirectory(dir) {
 
 async function processImages() {
   console.log('\n🖼️  Image Optimization Script\n');
+  if (FORCE_REGEN) {
+    console.log('⚡ --force: regenerate all outputs (bỏ qua cache)\n');
+  }
   console.log('='.repeat(50));
   
   // Ensure output directories exist (script tự tạo)
@@ -241,12 +275,24 @@ async function processImages() {
         continue;
       }
       
+      const inputTimeMs = await getFileModifiedTime(inputImagePath);
       console.log(`Processing: ${relativePath} (${originalSize} MB)`);
       
+      let hadWrite = false;
+      let hadFailure = false;
       let allThumbOk = true;
+
       for (let i = 0; i < CONFIG.thumbnailWidths.length; i++) {
         const w = CONFIG.thumbnailWidths[i];
         const outPath = thumbnailPaths[i];
+        const regenThumb = FORCE_REGEN || (await needsOutputRegeneration(outPath, inputTimeMs));
+        if (!regenThumb) {
+          const sz = parseFloat(await getFileSize(outPath));
+          stats.totalThumbnailSize += sz;
+          console.log(`  ⏭️  Thumb ${w}w: ${path.basename(outPath)} (unchanged)`);
+          continue;
+        }
+        hadWrite = true;
         const ok = await optimizeImage(inputImagePath, outPath, {
           width: w,
           quality: CONFIG.thumbnailQuality,
@@ -257,31 +303,47 @@ async function processImages() {
           const sz = parseFloat(await getFileSize(outPath));
           stats.totalThumbnailSize += sz;
           console.log(`  ✓ Thumb ${w}w: ${path.basename(outPath)} (${(sz * 1024).toFixed(0)} KB)`);
-        } else allThumbOk = false;
-      }
-      const thumbSuccess = allThumbOk;
-      
-      // Optimize full-size
-      const fullSuccess = await optimizeImage(inputImagePath, optimizedFullPath, {
-        quality: CONFIG.fullQuality,
-        format: ext === '.png' ? 'png' : 'jpeg'
-      });
-      
-      if (fullSuccess) {
-        const optimizedSize = parseFloat(await getFileSize(optimizedFullPath));
-        stats.totalFullSize += optimizedSize;
-        console.log(`  ✓ Full-size: ${fullName} (${optimizedSize} MB)`);
-        
-        if (thumbSuccess && fullSuccess) {
-          successCount++;
-          const reduction = ((originalSize - optimizedSize) / originalSize * 100).toFixed(1);
-          console.log(`  📊 Full size reduction: ${reduction}%\n`);
+        } else {
+          allThumbOk = false;
+          hadFailure = true;
         }
       }
-      
-      if (!thumbSuccess || !fullSuccess) {
+      const thumbSuccess = allThumbOk;
+
+      const regenFull = FORCE_REGEN || (await needsOutputRegeneration(optimizedFullPath, inputTimeMs));
+      let fullSuccess = true;
+      if (!regenFull) {
+        const sz = parseFloat(await getFileSize(optimizedFullPath));
+        stats.totalFullSize += sz;
+        console.log(`  ⏭️  Full-size: ${fullName} (unchanged)`);
+      } else {
+        hadWrite = true;
+        fullSuccess = await optimizeImage(inputImagePath, optimizedFullPath, {
+          quality: CONFIG.fullQuality,
+          format: ext === '.png' ? 'png' : 'jpeg'
+        });
+        if (fullSuccess) {
+          const optimizedSize = parseFloat(await getFileSize(optimizedFullPath));
+          stats.totalFullSize += optimizedSize;
+          console.log(`  ✓ Full-size: ${fullName} (${optimizedSize} MB)`);
+          const reduction = ((originalSize - optimizedSize) / originalSize * 100).toFixed(1);
+          console.log(`  📊 Full size reduction: ${reduction}%`);
+        } else {
+          hadFailure = true;
+        }
+      }
+
+      if (hadFailure) {
         failCount++;
         console.log(`  ✗ Failed to process\n`);
+      } else if (hadWrite && thumbSuccess && fullSuccess) {
+        successCount++;
+        console.log('');
+      } else if (!hadWrite) {
+        skippedCount++;
+        console.log(`  ⏭️  All outputs already up to date\n`);
+      } else {
+        console.log('');
       }
       
     } catch (error) {
@@ -307,8 +369,9 @@ async function processImages() {
     console.log(`  Total reduction: ${((stats.totalOriginalSize - stats.totalFullSize) / stats.totalOriginalSize * 100).toFixed(1)}%`);
   }
   
-  console.log('\n💡 Tip: Script automatically skips already-optimized images');
-  console.log('   (checks if output files are newer than or equal to input file)');
+  console.log('\n💡 Tip: Bỏ qua ảnh đã có đủ output còn mới hơn hoặc bằng file gốc.');
+  console.log('   Chỉ tạo lại từng file (thumb/full) nếu thiếu hoặc cũ hơn original.');
+  console.log('   Buộc generate lại tất cả: npm run optimize-images -- --force');
 
   // Tự động sinh danh sách gallery từ ảnh đã có trong original/ (hoặc public/)
   await writeGalleryList(files);

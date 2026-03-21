@@ -18,7 +18,7 @@ Nên cần thêm **800w** để tại max-width 432px vẫn nét trên DPR 3. `s
 ```
 public/images/
 ├── original/          (tùy chọn – ảnh gốc)
-├── thumbnails/        ✅ 3 file mỗi ảnh
+├── thumbnails/        ✅ 4 file WebP mỗi ảnh (đúng chữ **thumbnails**, không phải thumnails)
 │   ├── DSC02431_JPG-240.webp   (~10–25 KB)
 │   ├── DSC02431_JPG-400.webp   (~20–45 KB)
 │   ├── DSC02431_JPG-600.webp   (~35–80 KB)
@@ -39,7 +39,9 @@ public/images/
 3. Script sẽ:
    - Tạo thumbnails + full trong `public/images/thumbnails/` và `public/images/full/`,
    - **Tự động cập nhật** `src/galleryImages.generated.js` với danh sách tất cả ảnh trong `original/`.
-4. Gallery sẽ hiển thị **đúng những ảnh có trong** `public/images/original/` – không cần sửa tay `Gallery.jsx`.
+4. Gallery đọc danh sách từ **`src/galleryImages.generated.js`** (không quét thư mục `thumbnails`/`full` lúc chạy app). Chỉ copy tay file vào `thumbnails`/`full` **mà không** có ảnh trong `original/` + không chạy script → file generated **không có** ảnh đó → gallery sẽ **không** hiện.
+
+**Đã có sẵn file trong thumbnails/full?** Vẫn cần **một file gốc cùng tên logic** trong `public/images/original/` (có thể cùng nội dung ảnh bạn muốn), rồi chạy `npm run optimize-images`. Script sẽ bỏ qua bước encode nếu output đã đủ mới, nhưng vẫn **cập nhật** `galleryImages.generated.js`.
 
 Nếu chưa có thư mục `public/images/original/`, script sẽ dùng ảnh trong `public/` (và vẫn sinh danh sách gallery từ đó).
 
@@ -54,8 +56,9 @@ Nếu chưa có thư mục `public/images/original/`, script sẽ dùng ảnh tr
 
 **Cách 2 – Chỉnh file:** Mở **`src/galleryConfig.js`**:
 
-- **`GALLERY_ORDER = []`** (mặc định) → gallery hiển thị **tất cả** ảnh có trong `original/`, theo thứ tự tên file.
-- Muốn **chỉ hiển thị một số ảnh** và **tự sắp xếp thứ tự**: gán `GALLERY_ORDER` bằng mảng các đường dẫn `src` (đúng thứ tự bạn muốn).
+- **`GALLERY_ORDER = []`** (mảng rỗng) → gallery hiển thị **tất cả** ảnh trong `galleryImages.generated.js`, theo thứ tự tên file.
+- **`GALLERY_ORDER` có phần tử** → giữ **thứ tự** trong file; mọi ảnh **mới** trong generated (sau khi chạy script) mà chưa có trong `GALLERY_ORDER` sẽ **tự nối vào cuối** — **chỉ khi** bạn chưa lưu thứ tự riêng trong trình duyệt (localStorage từ `/admin`). Nếu đã chỉnh bằng Admin, thêm ảnh mới từ mục **“Thêm ảnh vào gallery”** bên dưới.
+- Muốn **ẩn** ảnh khỏi gallery: dùng trang **`/admin`** (xóa khỏi danh sách) hoặc bỏ ảnh khỏi `original/` + chạy lại script.
 
 Ví dụ:
 
@@ -67,7 +70,7 @@ export const GALLERY_ORDER = [
 ];
 ```
 
-Chỉ 3 ảnh này sẽ hiện trong gallery, theo đúng thứ tự trên. Tên file cần trùng với ảnh trong `galleryImages.generated.js` (sau khi chạy `npm run optimize-images`).
+Ví dụ trên: nếu `GALLERY_ORDER` chỉ liệt kê 3 ảnh, trước đây chỉ 3 ảnh đó hiện; **hiện tại** các ảnh khác trong generated vẫn **tự nối vào sau** (trừ khi bạn dùng Admin để giới hạn và lưu localStorage). Tên `src` phải trùng với entry trong `galleryImages.generated.js`.
 
 ## 🔧 Script: `npm run optimize-images`
 

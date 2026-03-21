@@ -4,14 +4,6 @@
  */
 export const GALLERY_IMAGES = [
   {
-    "src": "/chance-photo-1.jpg",
-    "alt": "chance-photo-1"
-  },
-  {
-    "src": "/chance-photo-2.jpg",
-    "alt": "chance-photo-2"
-  },
-  {
     "src": "/DSC00154.JPG",
     "alt": "DSC00154"
   },
@@ -427,12 +419,5 @@ export const GALLERY_IMAGES = [
     "src": "/NP__8896.JPG",
     "alt": "NP__8896"
   },
-  {
-    "src": "/photo1.jpg",
-    "alt": "photo1"
-  },
-  {
-    "src": "/photo2-2.jpg",
-    "alt": "photo2-2"
-  }
+
 ];

@@ -21,12 +21,6 @@ const getFullSizeSrc = (image) => {
   return image?.src || "";
 };
 
-const getOriginalSrc = (image) => {
-  if (!image?.src) return null;
-  const s = image.src.startsWith("/") ? image.src : `/${image.src}`;
-  return s;
-};
-
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const DISMISS_THRESHOLD = 120;
@@ -208,22 +202,40 @@ export default function MediaViewer({
     onClose?.();
   }, [onClose]);
 
-  const downloadUrl = currentImage
-    ? getOriginalSrc(currentImage) || getFullSizeSrc(currentImage)
-    : null;
+  /** Luôn dùng ảnh trong /images/full/ — không dùng getOriginalSrc (/DSC….JPG ở root): hosting SPA hay trả index.html → tải nhầm file .html (đặc biệt iOS). */
+  const downloadUrl = currentImage ? getFullSizeSrc(currentImage) : null;
   const downloadFilename =
-    currentImage?.src?.split("/").filter(Boolean).pop() || `image-${index + 1}.jpg`;
+    downloadUrl?.split("/").filter(Boolean).pop()?.split("?")[0] ||
+    `image-${index + 1}.jpg`;
 
-  const downloadImage = useCallback(() => {
+  const downloadImage = useCallback(async () => {
     if (!downloadUrl) return;
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.download = downloadFilename;
-    link.rel = "noopener";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }, [downloadUrl, downloadFilename]);
+    const filename =
+      /\.(jpe?g|png|webp)$/i.test(downloadFilename) ?
+        downloadFilename
+      : `${downloadFilename.replace(/\.[^/.]+$/, "") || `image-${index + 1}`}.jpg`;
+
+    try {
+      const res = await fetch(downloadUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const ct = res.headers.get("content-type") || blob.type || "";
+      if (ct.includes("text/html")) {
+        throw new Error("Server returned HTML instead of image");
+      }
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(downloadUrl, "_blank", "noopener,noreferrer");
+    }
+  }, [downloadUrl, downloadFilename, index]);
 
   // Keyboard
   useEffect(() => {

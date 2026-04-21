@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { motion, useMotionValueEvent, useScroll } from "framer-motion";
+import { motion } from "framer-motion";
 import { useLanguage } from "./contexts/LanguageContext";
 import { translations } from "./translations";
 
@@ -7,11 +7,8 @@ export default function TopNav({ tab, onTabChange }) {
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
   const [canShow, setCanShow] = useState(false); // delay initial reveal
   const navRef = useRef(null);
-  const lastScrollY = useRef(0);
-  const { scrollY } = useScroll();
   
   const TABS = [
     { key: "home", label: t.home },
@@ -36,20 +33,6 @@ export default function TopNav({ tab, onTabChange }) {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
-
-  useMotionValueEvent(scrollY, "change", (latest) => {
-    const previous = lastScrollY.current;
-    
-    if (latest > previous && latest > 100) {
-      // Scrolling down - hide navbar
-      setIsVisible(false);
-    } else if (latest < previous) {
-      // Scrolling up - show navbar
-      setIsVisible(true);
-    }
-    
-    lastScrollY.current = latest;
-  });
 
   const scrollToSchedule = (duration = 800) => {
     const scheduleSection = document.getElementById("schedule");
@@ -135,9 +118,9 @@ export default function TopNav({ tab, onTabChange }) {
     <motion.div
       ref={navRef}
       initial={{ y: -100, opacity: 0 }}
-      animate={{ 
-        y: canShow ? (isVisible ? 0 : -100) : -100,
-        opacity: canShow ? (isVisible ? 1 : 0) : 0
+      animate={{
+        y: canShow ? 0 : -100,
+        opacity: canShow ? 1 : 0,
       }}
       transition={{
         type: "spring",
@@ -146,7 +129,7 @@ export default function TopNav({ tab, onTabChange }) {
         mass: 0.8
       }}
       className={`fixed top-0 left-0 right-0 z-40 ${
-        isScrolled ? "bg-white/35 backdrop-blur-sm shadow-sm" : "bg-transparent"
+        isScrolled ? "bg-[#f6f7ef]/92 shadow-sm" : "bg-transparent"
       }`}
     >
       <nav className="mx-auto flex w-full justify-center">

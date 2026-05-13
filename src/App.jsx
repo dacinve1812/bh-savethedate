@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import envelopeImg from "../public/envelope.png"; // ảnh envelope nội bộ
 import InvitationBody from "./InvitationBody";
 import RSVPPage from "./RSVPPage";
 import AdminGalleryPage from "./pages/AdminGalleryPage";
+import FindYourSeatPage from "./pages/FindYourSeatPage";
+import AdminSeatingPage from "./pages/AdminSeatingPage";
+import EventHighlightsPage from "./pages/EventHighlightsPage";
 import MusicPlayer from "./MusicPlayer";
 import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
 import LanguageSelector from "./components/LanguageSelector";
@@ -35,7 +38,10 @@ export default function WeddingSite() {
     <Router>
       <Routes>
           <Route path="/rsvp" element={<RSVPPageWithMusic />} />
+        <Route path="/find-your-seat" element={<FindYourSeatPage />} />
+        <Route path="/event-highlights" element={<EventHighlightsPage />} />
         <Route path="/admin" element={<AdminGalleryPage />} />
+        <Route path="/admin/seating" element={<AdminSeatingPage />} />
         <Route path="*" element={<HomePage />} />
       </Routes>
     </Router>
@@ -53,20 +59,30 @@ function RSVPPageWithMusic() {
 }
 
 function HomePage() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [tab, setTab] = useState("home");
+  const galleryHash =
+    typeof window !== "undefined" &&
+    (() => {
+      const raw = window.location.hash.slice(1);
+      return raw === "gallery" || raw.startsWith("gallery/");
+    })();
+
+  const [isOpen, setIsOpen] = useState(() => Boolean(galleryHash));
+  const [tab, setTab] = useState(() => (galleryHash ? "gallery" : "home"));
   const [lightbox, setLightbox] = useState(null);
   const { language } = useLanguage();
-  const [showLanguageModal, setShowLanguageModal] = useState(true); // Start with modal open
+  const [showLanguageModal, setShowLanguageModal] = useState(() => !galleryHash);
   const t = translations[language] || translations.en;
 
-  // Hide modal when invitation is opened, show when on initial page
+  // Hide modal when invitation is opened; when closed, re-show language unless URL targets gallery
   useEffect(() => {
     if (isOpen) {
       setShowLanguageModal(false);
     } else {
-      // Always show modal when on initial page (before envelope)
-      setShowLanguageModal(true);
+      const raw = window.location.hash.slice(1);
+      const toGallery = raw === "gallery" || raw.startsWith("gallery/");
+      if (!toGallery) {
+        setShowLanguageModal(true);
+      }
     }
   }, [isOpen]);
 

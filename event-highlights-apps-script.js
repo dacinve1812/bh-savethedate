@@ -10,8 +10,8 @@
  *    Type: Web app → Execute as: Me → Who has access: Anyone
  * 5. Copy the Web App URL into your site .env as:
  *    VITE_EVENT_HIGHLIGHTS_URL=https://script.google.com/macros/s/XXXX/exec
- * 6. Redeploy after edits (Manage deployments → Edit → Version → New version).
- *
+ * 6. Redeploy after edits (Manage deployments → New version).
+ *    Admin delete uses POST JSON: { "action":"delete", "fileId":"..." } (Drive file trashed, sheet row removed).
  * LIMITS: Very large videos may time out (Apps Script ~6 min max; payload limits apply).
  *         For huge files, use YouTube / dedicated hosting and paste links instead (not in this script).
  */
@@ -35,6 +35,10 @@ function doGet(e) {
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents || "{}");
+    if (body.action === "delete") {
+      deleteHighlight_(body.fileId);
+      return jsonOut_({ success: true });
+    }
     if (body.action !== "add") {
       return jsonOut_({ success: false, message: "Unknown action" });
     }
@@ -64,6 +68,30 @@ function doPost(e) {
     });
   } catch (err) {
     return jsonOut_({ success: false, message: String(err) });
+  }
+}
+
+/** Remove Drive file (if present) and sheet row for this fileId. */
+function deleteHighlight_(fileId) {
+  const id = String(fileId || "").trim();
+  if (!id) throw new Error("Missing fileId");
+  try {
+    DriveApp.getFileById(id).setTrashed(true);
+  } catch (ignore) {
+    // Already removed or no access
+  }
+  const ss = SpreadsheetApp.openById(HIGHLIGHTS_SHEET_ID);
+  const sheet = ss.getSheets()[0];
+  const last = sheet.getLastRow();
+  if (last < 2) return;
+  const range = sheet.getRange(2, 1, last, 4);
+  const values = range.getValues();
+  for (var i = 0; i < values.length; i++) {
+    var rowFileId = String(values[i][2] || "");
+    if (rowFileId === id) {
+      sheet.deleteRow(i + 2);
+      return;
+    }
   }
 }
 

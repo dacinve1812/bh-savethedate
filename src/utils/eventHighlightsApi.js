@@ -123,3 +123,26 @@ export function driveImageUrl(fileId) {
 export function driveVideoPreviewUrl(fileId) {
   return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`;
 }
+
+/**
+ * @param {string} fileId
+ * @returns {Promise<void>}
+ */
+export async function deleteHighlight(fileId) {
+  const id = String(fileId || "").trim();
+  if (!id) throw new Error("Missing file id");
+
+  if (API_URL) {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "delete", fileId: id }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!json.success) throw new Error(json.message || "Delete failed");
+    return;
+  }
+
+  const next = readLocal().filter((x) => x.fileId !== id);
+  writeLocal(next);
+}

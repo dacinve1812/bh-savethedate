@@ -8,6 +8,7 @@ import AdminGalleryPage from "./pages/AdminGalleryPage";
 import FindYourSeatPage from "./pages/FindYourSeatPage";
 import AdminSeatingPage from "./pages/AdminSeatingPage";
 import EventHighlightsPage from "./pages/EventHighlightsPage";
+import AdminEventHighlightsPage from "./pages/AdminEventHighlightsPage";
 import MusicPlayer from "./MusicPlayer";
 import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
 import LanguageSelector from "./components/LanguageSelector";
@@ -42,6 +43,7 @@ export default function WeddingSite() {
         <Route path="/event-highlights" element={<EventHighlightsPage />} />
         <Route path="/admin" element={<AdminGalleryPage />} />
         <Route path="/admin/seating" element={<AdminSeatingPage />} />
+        <Route path="/admin/event-highlights" element={<AdminEventHighlightsPage />} />
         <Route path="*" element={<HomePage />} />
       </Routes>
     </Router>

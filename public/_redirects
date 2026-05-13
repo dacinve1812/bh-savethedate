@@ -1,0 +1,3 @@
+# SPA fallback for React Router (Vite build → dist).
+# Without this, direct visits or refresh on /admin/event-highlights, /find-your-seat, etc. return Netlify 404.
+/*    /index.html   200

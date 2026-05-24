@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion as Motion, AnimatePresence } from "framer-motion";
 import { loadSeating, findSeatsForQuery, getGuestRecommendations } from "../utils/seatingData";
+import { fetchSeatingRemote, isSeatingSyncConfigured } from "../utils/seatingApi";
 
 const FLOOR_PLAN_SRC = "/Table.png";
 
@@ -40,13 +41,37 @@ export default function FindYourSeatPage() {
   const [name, setName] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [matches, setMatches] = useState([]);
+  const [seating, setSeating] = useState(() => loadSeating());
 
-  const recommendations = useMemo(() => getGuestRecommendations(name, loadSeating(), 8), [name]);
+  useEffect(() => {
+    if (!isSeatingSyncConfigured()) return undefined;
+
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const data = await fetchSeatingRemote();
+        if (!cancelled) setSeating(data);
+      } catch {
+        if (!cancelled) setSeating(loadSeating());
+      }
+    };
+
+    refresh();
+    const interval = window.setInterval(refresh, 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  const recommendations = useMemo(() => getGuestRecommendations(name, seating, 8), [name, seating]);
 
   useEffect(() => {
     const onUpdate = () => {
+      const data = loadSeating();
+      setSeating(data);
       if (submitted && name.trim()) {
-        setMatches(findSeatsForQuery(name, loadSeating()));
+        setMatches(findSeatsForQuery(name, data));
       }
     };
     window.addEventListener("seating_updated", onUpdate);
@@ -61,7 +86,7 @@ export default function FindYourSeatPage() {
     e.preventDefault();
     const q = name.trim();
     if (!q) return;
-    setMatches(findSeatsForQuery(q, loadSeating()));
+    setMatches(findSeatsForQuery(q, seating));
     setSubmitted(true);
   };
 

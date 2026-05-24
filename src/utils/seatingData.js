@@ -49,6 +49,23 @@ export function getDefaultSeating() {
   return { tables };
 }
 
+/**
+ * Merge remote/custom table map onto default table keys (keeps empty default tables).
+ * @param {SeatingData} base
+ * @param {Record<string, unknown>} incoming
+ * @returns {SeatingData}
+ */
+export function mergeSeatingTables(base, incoming) {
+  const merged = { tables: { ...base.tables } };
+  for (const k of Object.keys(incoming)) {
+    const arr = incoming[k];
+    if (Array.isArray(arr)) {
+      merged.tables[k] = arr.map((x) => String(x).trim()).filter(Boolean);
+    }
+  }
+  return merged;
+}
+
 /** @returns {SeatingData} */
 export function loadSeating() {
   try {
@@ -57,14 +74,7 @@ export function loadSeating() {
     if (!raw) return base;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed.tables !== "object") return base;
-    const merged = { tables: { ...base.tables } };
-    for (const k of Object.keys(parsed.tables)) {
-      const arr = parsed.tables[k];
-      if (Array.isArray(arr)) {
-        merged.tables[k] = arr.map((x) => String(x).trim()).filter(Boolean);
-      }
-    }
-    return merged;
+    return mergeSeatingTables(base, parsed.tables);
   } catch {
     return getDefaultSeating();
   }

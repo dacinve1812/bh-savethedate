@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   loadSeating,
@@ -9,6 +9,7 @@ import {
   sortTableKeys,
   suggestNextTableNumber,
 } from "../utils/seatingData";
+import { fetchSeatingRemote, isSeatingSyncConfigured, saveSeatingRemote } from "../utils/seatingApi";
 import { ArrowLeft, LogOut, Download, Upload, Save, Plus, Trash2 } from "lucide-react";
 
 const AUTH_KEY = "admin_seating_auth";
@@ -76,9 +77,80 @@ export default function AdminSeatingPage() {
 }
 
 function AdminSeatingContent({ onLogout }) {
+  const syncEnabled = isSeatingSyncConfigured();
   const [data, setData] = useState(() => loadSeating());
   const [csvDraft, setCsvDraft] = useState(() => seatingToCsvLong(loadSeating()));
   const [importMsg, setImportMsg] = useState(null);
+  const [loading, setLoading] = useState(syncEnabled);
+  const [syncing, setSyncing] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const remoteTimer = useRef(null);
+
+  useEffect(() => {
+    if (!syncEnabled) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const remote = await fetchSeatingRemote();
+        if (cancelled) return;
+        setData(remote);
+        setCsvDraft(seatingToCsvLong(remote));
+        setLoadError("");
+      } catch (e) {
+        if (!cancelled) setLoadError(String(e.message || e));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [syncEnabled]);
+
+  const showMsg = useCallback((type, text, ms = 2500) => {
+    setImportMsg({ type, text });
+    setTimeout(() => setImportMsg(null), ms);
+  }, []);
+
+  const pushRemote = useCallback(
+    async (next, okText) => {
+      if (!syncEnabled) {
+        saveSeating(next);
+        showMsg("ok", okText || "Saved to this browser.");
+        return;
+      }
+      setSyncing(true);
+      try {
+        const synced = await saveSeatingRemote(next);
+        setData(synced);
+        setCsvDraft(seatingToCsvLong(synced));
+        showMsg("ok", okText || "Saved and synced to Google Sheet.");
+      } catch (e) {
+        showMsg("err", String(e.message || e), 5000);
+      } finally {
+        setSyncing(false);
+      }
+    },
+    [syncEnabled, showMsg]
+  );
+
+  const scheduleRemoteSave = useCallback(
+    (next) => {
+      if (!syncEnabled) return;
+      if (remoteTimer.current) clearTimeout(remoteTimer.current);
+      remoteTimer.current = setTimeout(() => {
+        pushRemote(next, "Synced to Google Sheet.");
+      }, 900);
+    },
+    [syncEnabled, pushRemote]
+  );
+
+  useEffect(
+    () => () => {
+      if (remoteTimer.current) clearTimeout(remoteTimer.current);
+    },
+    []
+  );
 
   const tableKeys = useMemo(() => sortTableKeys(Object.keys(data.tables)), [data.tables]);
 
@@ -95,14 +167,16 @@ function AdminSeatingContent({ onLogout }) {
       const next = { tables: { ...prev.tables, [table]: guests } };
       syncDraftFromData(next);
       saveSeating(next);
+      scheduleRemoteSave(next);
       return next;
     });
   };
 
-  const persist = (next) => {
-    saveSeating(next);
+  const persist = async (next, okText) => {
+    if (remoteTimer.current) clearTimeout(remoteTimer.current);
     setData(next);
     syncDraftFromData(next);
+    await pushRemote(next, okText);
   };
 
   const handleAddTable = () => {
@@ -120,29 +194,18 @@ function AdminSeatingContent({ onLogout }) {
       return;
     }
     const next = { tables: { ...data.tables, [key]: [] } };
-    persist(next);
-    setImportMsg({ type: "ok", text: `Added table ${key}.` });
-    setTimeout(() => setImportMsg(null), 2000);
+    persist(next, `Added table ${key}.`);
   };
 
   const handleRemoveTable = (table) => {
     if (!window.confirm(`Remove table ${table} and all guest names on it?`)) return;
-    setData((prev) => {
-      const tables = { ...prev.tables };
-      delete tables[table];
-      const next = { tables };
-      saveSeating(next);
-      syncDraftFromData(next);
-      return next;
-    });
-    setImportMsg({ type: "ok", text: `Removed table ${table}.` });
-    setTimeout(() => setImportMsg(null), 2000);
+    const tables = { ...data.tables };
+    delete tables[table];
+    persist({ tables }, `Removed table ${table}.`);
   };
 
   const handleSaveFromEditor = () => {
-    persist(data);
-    setImportMsg({ type: "ok", text: "Saved to this browser." });
-    setTimeout(() => setImportMsg(null), 2500);
+    persist(data, syncEnabled ? "Saved and synced to Google Sheet." : "Saved to this browser.");
   };
 
   const handleExportDownload = () => {
@@ -155,23 +218,26 @@ function AdminSeatingContent({ onLogout }) {
     URL.revokeObjectURL(url);
   };
 
-  const handleImportCsvText = () => {
+  const handleImportCsvText = async () => {
     try {
       const next = parseSeatingCsv(csvDraft);
-      persist(next);
-      setImportMsg({ type: "ok", text: "CSV applied and saved." });
+      await persist(next, "CSV applied and saved.");
     } catch (e) {
-      setImportMsg({ type: "err", text: String(e.message || e) });
+      showMsg("err", String(e.message || e), 4000);
     }
-    setTimeout(() => setImportMsg(null), 4000);
   };
 
   const handleResetDefaults = () => {
-    const next = getDefaultSeating();
-    persist(next);
-    setImportMsg({ type: "ok", text: "Reset to empty tables (defaults)." });
-    setTimeout(() => setImportMsg(null), 2500);
+    persist(getDefaultSeating(), "Reset to empty tables (defaults).");
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f6f7ef] flex items-center justify-center text-gray-600">
+        Loading seating…
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f6f7ef] text-[#1c2321] pb-12">
@@ -215,10 +281,30 @@ function AdminSeatingContent({ onLogout }) {
           </div>
         </div>
         <p className="text-gray-600 text-sm mt-2 max-w-[1200px] mx-auto">
-          Edit names per table below, or use CSV: one guest per row <code className="bg-gray-200 px-1 rounded">table,guest</code>.
-          You can also use one row per table with multiple names separated by <code className="bg-gray-200 px-1 rounded">;</code> in the second column.
-          Data is stored in this browser (localStorage). Export a backup before clearing site data.
+          Edit names per table below, or use CSV: one guest per row{" "}
+          <code className="bg-gray-200 px-1 rounded">table,guest</code>.
+          You can also use one row per table with multiple names separated by{" "}
+          <code className="bg-gray-200 px-1 rounded">;</code> in the second column.
+          {syncEnabled ? (
+            <>
+              {" "}
+              Changes sync to Google Sheet via{" "}
+              <code className="bg-gray-200 px-1 rounded">VITE_SEATING_URL</code>
+              {syncing ? " (syncing…)" : "."}
+            </>
+          ) : (
+            <>
+              {" "}
+              Data is stored in this browser only. Set{" "}
+              <code className="bg-gray-200 px-1 rounded">VITE_SEATING_URL</code> to sync for all guests.
+            </>
+          )}
         </p>
+        {loadError && (
+          <p className="text-sm mt-2 max-w-[1200px] mx-auto text-amber-800">
+            Could not load from Google Sheet: {loadError}. Showing cached or default data.
+          </p>
+        )}
         {importMsg && (
           <p
             className={`text-sm mt-2 max-w-[1200px] mx-auto ${importMsg.type === "err" ? "text-red-600" : "text-green-700"}`}

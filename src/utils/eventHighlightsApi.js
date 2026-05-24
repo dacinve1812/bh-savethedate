@@ -33,6 +33,23 @@ function writeLocal(items) {
   localStorage.setItem(LS_KEY, JSON.stringify(items));
 }
 
+function normalizeHighlights(items) {
+  /** @type {Map<string, HighlightItem>} */
+  const byId = new Map();
+  for (const raw of items) {
+    const fileId = String(raw?.fileId || "").trim();
+    if (!fileId) continue;
+    byId.set(fileId, {
+      createdAt: String(raw.createdAt || ""),
+      note: String(raw.note || ""),
+      fileId,
+      mimeType: String(raw.mimeType || ""),
+      ...(raw._dataUrl ? { _dataUrl: raw._dataUrl } : {}),
+    });
+  }
+  return [...byId.values()].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+
 /**
  * @returns {Promise<HighlightItem[]>}
  */
@@ -43,10 +60,9 @@ export async function fetchHighlights() {
     const json = await res.json().catch(() => ({}));
     if (!json.success) throw new Error(json.message || "Failed to load highlights");
     const items = Array.isArray(json.items) ? json.items : [];
-    return items.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    return normalizeHighlights(items);
   }
-  const items = readLocal();
-  return items.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  return normalizeHighlights(readLocal());
 }
 
 function fileToBase64(file) {
@@ -116,8 +132,18 @@ export async function uploadHighlight(file, note) {
   return item;
 }
 
+export function driveImageThumbUrl(fileId, width = 400) {
+  return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w${width}`;
+}
+
+/** Full-size-ish view for lightbox (still resized by Drive, not raw upload). */
+export function driveImageViewerUrl(fileId) {
+  return driveImageThumbUrl(fileId, 1200);
+}
+
+/** @deprecated Prefer driveImageThumbUrl / driveImageViewerUrl */
 export function driveImageUrl(fileId) {
-  return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1200`;
+  return driveImageThumbUrl(fileId);
 }
 
 export function driveVideoPreviewUrl(fileId) {

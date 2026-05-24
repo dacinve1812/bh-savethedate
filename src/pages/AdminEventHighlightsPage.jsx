@@ -4,7 +4,7 @@ import {
   fetchHighlights,
   deleteHighlight,
   isSharedBackendConfigured,
-  driveImageUrl,
+  driveImageThumbUrl,
   driveVideoPreviewUrl,
 } from "../utils/eventHighlightsApi";
 import { ArrowLeft, LogOut, Trash2 } from "lucide-react";
@@ -233,7 +233,7 @@ function AdminHighlightThumb({ item }) {
 
   return (
     <img
-      src={driveImageUrl(item.fileId)}
+      src={driveImageThumbUrl(item.fileId)}
       alt=""
       className="absolute inset-0 w-full h-full object-cover"
       loading="lazy"

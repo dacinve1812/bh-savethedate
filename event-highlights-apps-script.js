@@ -84,7 +84,8 @@ function deleteHighlight_(fileId) {
   const sheet = ss.getSheets()[0];
   const last = sheet.getLastRow();
   if (last < 2) return;
-  const range = sheet.getRange(2, 1, last, 4);
+  const numRows = last - 1;
+  const range = sheet.getRange(2, 1, numRows, 4);
   const values = range.getValues();
   for (var i = 0; i < values.length; i++) {
     var rowFileId = String(values[i][2] || "");
@@ -107,18 +108,22 @@ function appendSheetRow_(createdAt, note, fileId, mimeType) {
 function listItemsFromSheet_() {
   const ss = SpreadsheetApp.openById(HIGHLIGHTS_SHEET_ID);
   const sheet = ss.getSheets()[0];
-  if (sheet.getLastRow() < 2) return [];
-  const range = sheet.getRange(2, 1, sheet.getLastRow(), 4);
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  const numRows = lastRow - 1;
+  const range = sheet.getRange(2, 1, numRows, 4);
   const values = range.getValues();
   const items = [];
   for (var i = 0; i < values.length; i++) {
     var row = values[i];
+    var fileId = String(row[2] || "").trim();
+    if (!fileId) continue;
     var ca = row[0];
     if (ca instanceof Date) ca = ca.toISOString();
     items.push({
       createdAt: String(ca),
       note: String(row[1] || ""),
-      fileId: String(row[2] || ""),
+      fileId: fileId,
       mimeType: String(row[3] || ""),
     });
   }

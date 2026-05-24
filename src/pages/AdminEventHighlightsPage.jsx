@@ -5,7 +5,7 @@ import {
   deleteHighlight,
   isSharedBackendConfigured,
   driveImageThumbUrl,
-  driveVideoPreviewUrl,
+  highlightVideoPosterUrl,
 } from "../utils/eventHighlightsApi";
 import { ArrowLeft, LogOut, Trash2 } from "lucide-react";
 
@@ -222,13 +222,19 @@ function AdminHighlightThumb({ item }) {
   if (!item.fileId) return null;
 
   if (isVideo) {
-    return (
-      <iframe
-        title="Highlight video"
-        src={driveVideoPreviewUrl(item.fileId)}
-        className="absolute inset-0 w-full h-full border-0 pointer-events-none"
-      />
-    );
+    const poster = highlightVideoPosterUrl(item, 320);
+    if (poster) {
+      return (
+        <img
+          src={poster}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+        />
+      );
+    }
+    return <div className="absolute inset-0 bg-[#2a332f] flex items-center justify-center text-white/60 text-xs">Video</div>;
   }
 
   return (

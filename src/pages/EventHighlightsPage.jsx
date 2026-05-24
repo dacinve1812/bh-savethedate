@@ -10,8 +10,9 @@ import {
   isSharedBackendConfigured,
   driveImageThumbUrl,
   driveImageViewerUrl,
-  driveVideoPreviewUrl,
 } from "../utils/eventHighlightsApi";
+import { prepareHighlightFile, storyHintText, STORY_MAX_DURATION_SEC } from "../utils/highlightMediaPrepare";
+import HighlightVideoPlayer from "../components/HighlightVideoPlayer";
 
 const ACCEPT = "image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime";
 
@@ -56,6 +57,7 @@ export default function EventHighlightsPage() {
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [uploadError, setUploadError] = useState("");
   const [uploadOk, setUploadOk] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(null);
@@ -119,6 +121,7 @@ export default function EventHighlightsPage() {
     });
     setUploadError("");
     setUploadOk(false);
+    setUploadProgress(null);
   }, []);
 
   const onPickFile = async (f) => {
@@ -126,6 +129,30 @@ export default function EventHighlightsPage() {
     clearFile();
     setUploadError("");
     setUploadOk(false);
+    setUploadProgress(null);
+
+    if (f.type.startsWith("video/")) {
+      try {
+        const url = URL.createObjectURL(f);
+        const v = document.createElement("video");
+        v.preload = "metadata";
+        v.src = url;
+        await new Promise((resolve, reject) => {
+          v.onloadedmetadata = () => resolve();
+          v.onerror = () => reject(new Error("Could not read video"));
+        });
+        URL.revokeObjectURL(url);
+        if (v.duration > STORY_MAX_DURATION_SEC + 0.25) {
+          setUploadError(
+            `Video is ${Math.ceil(v.duration)}s — max ${STORY_MAX_DURATION_SEC}s (story-style). Trim it first.`
+          );
+          return;
+        }
+      } catch {
+        /* allow submit-time validation */
+      }
+    }
+
     setFile(f);
     const url = await createPreviewUrl(f);
     setPreviewUrl(url);
@@ -146,14 +173,24 @@ export default function EventHighlightsPage() {
     setUploading(true);
     setUploadError("");
     setUploadOk(false);
+    setUploadProgress({ percent: 0, label: "Starting…" });
     try {
-      await uploadHighlight(file, note);
+      const prepared = await prepareHighlightFile(file, (p) =>
+        setUploadProgress({ percent: p.percent, label: p.label })
+      );
+      await uploadHighlight(prepared.file, note, {
+        thumbFile: prepared.thumbFile,
+        durationSec: prepared.durationSec,
+        onProgress: (p) => setUploadProgress({ percent: p.percent, label: p.label }),
+      });
       clearFile();
       setNote("");
       setUploadOk(true);
+      setUploadProgress({ percent: 100, label: "Complete" });
       await reload();
     } catch (err) {
       setUploadError(String(err.message || err));
+      setUploadProgress(null);
     } finally {
       setUploading(false);
     }
@@ -209,7 +246,8 @@ export default function EventHighlightsPage() {
         />
 
         <section className="rounded-3xl bg-white/80 backdrop-blur-sm p-5 sm:p-6 shadow-[0_12px_40px_-16px_rgba(28,35,33,0.15)]">
-          <h2 className="text-sm font-medium text-[#5c6f54] tracking-wide mb-4">Your moment</h2>
+          <h2 className="text-sm font-medium text-[#5c6f54] tracking-wide mb-1">Your moment</h2>
+          <p className="text-[11px] text-gray-500 mb-4">{storyHintText()}</p>
 
           {!file ? (
             <div className="flex flex-col sm:flex-row gap-3">
@@ -279,13 +317,27 @@ export default function EventHighlightsPage() {
               {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
               {uploadOk && <p className="text-sm text-[#5c6f54]">Thanks! Your moment was added. 🤍</p>}
 
+              {(uploading || uploadProgress) && (
+                <p
+                  className="flex justify-between text-[11px] text-gray-500 tabular-nums"
+                  aria-live="polite"
+                  aria-valuenow={uploadProgress?.percent ?? 0}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  role="progressbar"
+                >
+                  <span>{uploadProgress?.label || "Working…"}</span>
+                  <span className="font-medium text-[#5c6f54]">{uploadProgress?.percent ?? 0}%</span>
+                </p>
+              )}
+
               <button
                 type="submit"
                 disabled={uploading}
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-medium bg-[#5c6f54] text-white shadow-[0_6px_20px_-6px_rgba(92,111,84,0.5)] hover:opacity-92 disabled:opacity-50 transition-opacity"
               >
                 <Upload size={18} />
-                {uploading ? "Uploading…" : "Share this moment"}
+                {uploading ? "Please wait…" : "Share this moment"}
               </button>
             </form>
           )}
@@ -593,27 +645,7 @@ function HighlightMedia({ item, isVideo, variant = "thumb" }) {
   if (!item.fileId) return null;
 
   if (isVideo) {
-    if (isFull) {
-      return (
-        <iframe
-          title="Guest video"
-          src={driveVideoPreviewUrl(item.fileId)}
-          className="w-full aspect-video max-h-[min(72vh,680px)] border-0 rounded-xl"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      );
-    }
-    return (
-      <div className="relative w-full bg-[#1c2321]/90">
-        <DriveHighlightImage fileId={item.fileId} variant="thumb" />
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25">
-          <span className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white text-sm">
-            ▶
-          </span>
-        </div>
-      </div>
-    );
+    return <HighlightVideoPlayer item={item} variant={variant} />;
   }
 
   return <DriveHighlightImage fileId={item.fileId} variant={variant} />;

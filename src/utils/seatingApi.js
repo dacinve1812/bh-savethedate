@@ -49,7 +49,7 @@ export async function saveSeatingRemote(data) {
 
   const res = await fetch(API_URL, {
     method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    redirect: "follow",
     body: JSON.stringify({
       action: "save",
       password: ADMIN_PASSWORD,

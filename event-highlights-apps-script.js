@@ -4,7 +4,7 @@
  * SETUP:
  * 1. Create a Google Drive folder for uploads. Copy its FOLDER_ID from the URL.
  * 2. Create a Google Sheet (can be new). Copy SHEET_ID from the URL.
- *    First sheet tab will get rows: createdAt | note | fileId | mimeType
+ *    Sheet columns: createdAt | note | fileId | mimeType | thumbFileId | durationSec
  * 3. Paste FOLDER_ID and SHEET_ID below.
  * 4. Extensions → Apps Script → paste this file → Deploy → New deployment →
  *    Type: Web app → Execute as: Me → Who has access: Anyone
@@ -13,7 +13,7 @@
  * 6. Redeploy after edits (Manage deployments → New version).
  *    Admin delete uses POST JSON: { "action":"delete", "fileId":"..." } (Drive file trashed, sheet row removed).
  * LIMITS: Very large videos may time out (Apps Script ~6 min max; payload limits apply).
- *         For huge files, use YouTube / dedicated hosting and paste links instead (not in this script).
+ *         Client should send short story-style clips (see highlightMediaPrepare.js).
  */
 
 const HIGHLIGHTS_FOLDER_ID = "10Znzbfwxf8rg_tQzG6f2yaLMoPdEYmUT";
@@ -59,50 +59,84 @@ function doPost(e) {
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
     const fileId = file.getId();
+    var thumbFileId = "";
+    if (body.thumbDataBase64) {
+      try {
+        var thumbBytes = Utilities.base64Decode(body.thumbDataBase64);
+        var thumbMime = String(body.thumbMimeType || "image/jpeg");
+        var thumbBlob = Utilities.newBlob(thumbBytes, thumbMime, "thumb-" + Date.now() + ".jpg");
+        var thumbFile = folder.createFile(thumbBlob);
+        thumbFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        thumbFileId = thumbFile.getId();
+      } catch (thumbErr) {
+        // Video still saved if thumbnail fails
+      }
+    }
+
+    var durationSec = Number(body.durationSec);
+    if (!isFinite(durationSec) || durationSec < 0) durationSec = 0;
+
     const createdAt = new Date().toISOString();
-    appendSheetRow_(createdAt, note, fileId, mimeType);
+    appendSheetRow_(createdAt, note, fileId, mimeType, thumbFileId, durationSec);
 
     return jsonOut_({
       success: true,
-      item: { createdAt: createdAt, note: note, fileId: fileId, mimeType: mimeType },
+      item: {
+        createdAt: createdAt,
+        note: note,
+        fileId: fileId,
+        mimeType: mimeType,
+        thumbFileId: thumbFileId,
+        durationSec: durationSec,
+      },
     });
   } catch (err) {
     return jsonOut_({ success: false, message: String(err) });
   }
 }
 
-/** Remove Drive file (if present) and sheet row for this fileId. */
+/** Remove Drive file(s) and sheet row for this fileId. */
 function deleteHighlight_(fileId) {
   const id = String(fileId || "").trim();
   if (!id) throw new Error("Missing fileId");
-  try {
-    DriveApp.getFileById(id).setTrashed(true);
-  } catch (ignore) {
-    // Already removed or no access
-  }
+
+  var thumbId = "";
   const ss = SpreadsheetApp.openById(HIGHLIGHTS_SHEET_ID);
   const sheet = ss.getSheets()[0];
   const last = sheet.getLastRow();
-  if (last < 2) return;
-  const numRows = last - 1;
-  const range = sheet.getRange(2, 1, numRows, 4);
-  const values = range.getValues();
-  for (var i = 0; i < values.length; i++) {
-    var rowFileId = String(values[i][2] || "");
-    if (rowFileId === id) {
-      sheet.deleteRow(i + 2);
-      return;
+  if (last >= 2) {
+    const numRows = last - 1;
+    const colCount = Math.max(4, sheet.getLastColumn());
+    const range = sheet.getRange(2, 1, numRows, colCount);
+    const values = range.getValues();
+    for (var i = 0; i < values.length; i++) {
+      var rowFileId = String(values[i][2] || "");
+      if (rowFileId === id) {
+        thumbId = String(values[i][4] || "").trim();
+        sheet.deleteRow(i + 2);
+        break;
+      }
     }
+  }
+
+  try {
+    DriveApp.getFileById(id).setTrashed(true);
+  } catch (ignore) {}
+
+  if (thumbId) {
+    try {
+      DriveApp.getFileById(thumbId).setTrashed(true);
+    } catch (ignore2) {}
   }
 }
 
-function appendSheetRow_(createdAt, note, fileId, mimeType) {
+function appendSheetRow_(createdAt, note, fileId, mimeType, thumbFileId, durationSec) {
   const ss = SpreadsheetApp.openById(HIGHLIGHTS_SHEET_ID);
   const sheet = ss.getSheets()[0];
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow(["createdAt", "note", "fileId", "mimeType"]);
+    sheet.appendRow(["createdAt", "note", "fileId", "mimeType", "thumbFileId", "durationSec"]);
   }
-  sheet.appendRow([createdAt, note, fileId, mimeType]);
+  sheet.appendRow([createdAt, note, fileId, mimeType, thumbFileId || "", durationSec || ""]);
 }
 
 function listItemsFromSheet_() {
@@ -111,7 +145,8 @@ function listItemsFromSheet_() {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
   const numRows = lastRow - 1;
-  const range = sheet.getRange(2, 1, numRows, 4);
+  const colCount = Math.max(4, sheet.getLastColumn());
+  const range = sheet.getRange(2, 1, numRows, colCount);
   const values = range.getValues();
   const items = [];
   for (var i = 0; i < values.length; i++) {
@@ -120,11 +155,15 @@ function listItemsFromSheet_() {
     if (!fileId) continue;
     var ca = row[0];
     if (ca instanceof Date) ca = ca.toISOString();
+    var dur = Number(row[5]);
+    if (!isFinite(dur) || dur < 0) dur = 0;
     items.push({
       createdAt: String(ca),
       note: String(row[1] || ""),
       fileId: fileId,
       mimeType: String(row[3] || ""),
+      thumbFileId: String(row[4] || "").trim(),
+      durationSec: dur,
     });
   }
   items.sort(function (a, b) {

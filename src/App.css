@@ -1352,7 +1352,6 @@
     cursor: pointer;
     align-self: start;
     width: 100%;
-    margin-bottom: var(--gallery-masonry-gap);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
     min-height: 0;
 }
@@ -1470,15 +1469,6 @@
 .image-placeholder__icon {
     color: #c0c0c0;
     opacity: 0.5;
-}
-
-/* Gallery item with placeholder */
-.gallery__image-wrapper {
-    position: relative;
-    width: 100%;
-    overflow: hidden;
-    border-radius: 8px;
-    background: #f0f0f0;
 }
 
 .gallery__image-wrapper img {

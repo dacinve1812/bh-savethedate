@@ -2,6 +2,11 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { ChevronUp, ChevronDown, Trash2, Copy, RotateCcw, ArrowLeft, Plus, LogOut } from "lucide-react";
 import { GALLERY_IMAGES as ALL_IMAGES } from "../galleryImages.generated";
+import {
+  computeMasonryRowSpan,
+  getMasonryGapPx,
+  measureMasonryContentHeight,
+} from "../utils/masonryLayout";
 import { GALLERY_ORDER } from "../galleryConfig";
 import { getOptimizedImagePaths } from "../Gallery";
 
@@ -231,7 +236,6 @@ function AdminGalleryContent({ onLogout }) {
   );
 }
 
-const MASONRY_ROW_HEIGHT_PX = 8;
 
 function AdminGalleryTile({ src, index, total, onMoveUp, onMoveDown, onRemove }) {
   const paths = getOptimizedImagePaths(src);
@@ -247,12 +251,10 @@ function AdminGalleryTile({ src, index, total, onMoveUp, onMoveDown, onRemove })
     const wrapper = contentRef.current;
     if (!wrapper) return;
     const grid = wrapper.closest(".gallery__masonry");
-    const rowGapPx = grid ? parseFloat(getComputedStyle(grid).rowGap) || 0 : 0;
-    const h = wrapper.getBoundingClientRect().height;
-    if (h <= 0) return;
-    const unit = MASONRY_ROW_HEIGHT_PX + rowGapPx;
-    const span = Math.max(1, Math.ceil((h + rowGapPx) / unit));
-    setRowSpan(span);
+    const gapPx = getMasonryGapPx(grid);
+    const wrapperH = measureMasonryContentHeight(wrapper);
+    if (wrapperH <= 0) return;
+    setRowSpan(computeMasonryRowSpan(wrapperH, gapPx));
   }, []);
 
   useEffect(() => {

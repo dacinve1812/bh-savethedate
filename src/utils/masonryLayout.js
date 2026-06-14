@@ -14,9 +14,50 @@ export function getViewportMasonryGapPx() {
   return 16;
 }
 
-/** Read vertical gap between masonry items (px). Matches --gallery-masonry-gap. */
-export function getMasonryGapPx(_gridEl) {
+/** Product of CSS `zoom` on ancestors (invitation wrapper uses zoom on short viewports). */
+export function getAncestorZoomFactor(el) {
+  if (!el || typeof window === "undefined") return 1;
+  let factor = 1;
+  for (let node = el.parentElement; node; node = node.parentElement) {
+    const { zoom } = getComputedStyle(node);
+    if (zoom && zoom !== "normal") {
+      const value = parseFloat(zoom);
+      if (Number.isFinite(value) && value > 0) factor *= value;
+    }
+  }
+  return factor;
+}
+
+/** Layout height for masonry span — offsetHeight matches grid tracks; rect shrinks under zoom. */
+export function measureMasonryContentHeight(el) {
+  if (!el) return 0;
+  const offsetH = el.offsetHeight;
+  const rectH = el.getBoundingClientRect().height;
+  if (offsetH <= 0) return rectH;
+  if (rectH <= 0) return offsetH;
+  const zoom = getAncestorZoomFactor(el);
+  if (zoom < 1 && rectH < offsetH * 0.98) return offsetH;
+  return Math.max(offsetH, rectH / (zoom || 1));
+}
+
+/** Read gap between masonry items (px). Matches --gallery-masonry-gap on the grid. */
+export function getMasonryGapPx(gridEl) {
+  if (gridEl) {
+    const styles = getComputedStyle(gridEl);
+    const customGap = styles.getPropertyValue("--gallery-masonry-gap").trim();
+    if (customGap) {
+      const parsed = parseFloat(customGap);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    const columnGap = parseFloat(styles.columnGap);
+    if (Number.isFinite(columnGap) && columnGap > 0) return columnGap;
+  }
   return getViewportMasonryGapPx();
+}
+
+export function computeMasonryRowSpan(contentHeightPx, gapPx = DEFAULT_MASONRY_GAP_PX) {
+  if (contentHeightPx <= 0) return 1;
+  return Math.max(1, Math.ceil((contentHeightPx + gapPx) / MASONRY_ROW_HEIGHT_PX));
 }
 
 export function estimateRowSpan(
@@ -33,8 +74,8 @@ export function estimateRowSpan(
     window.innerWidth <= 768 ? 2 : MASONRY_COLUMN_COUNT;
   const gridGap = gapPx;
   const colW = (containerW - gridGap * (columns - 1)) / columns;
-  const h = colW / aspectRatio + gridGap;
-  return Math.max(1, Math.ceil(h / MASONRY_ROW_HEIGHT_PX));
+  const contentH = colW / aspectRatio;
+  return computeMasonryRowSpan(contentH, gapPx);
 }
 
 export function useMasonryRowSpan(contentRef, initialAspectRatio = DEFAULT_ASPECT_RATIO) {
@@ -44,17 +85,11 @@ export function useMasonryRowSpan(contentRef, initialAspectRatio = DEFAULT_ASPEC
   const recalcSpan = useCallback(() => {
     const wrapper = contentRef.current;
     if (!wrapper) return;
-    const itemEl = wrapper.closest(".gallery__item");
-    const gapPx = getMasonryGapPx();
-    const wrapperH = wrapper.getBoundingClientRect().height;
+    const grid = wrapper.closest(".gallery__masonry");
+    const gapPx = getMasonryGapPx(grid);
+    const wrapperH = measureMasonryContentHeight(wrapper);
     if (wrapperH <= 0) return;
-    let marginBottom = gapPx;
-    if (itemEl) {
-      const mb = parseFloat(getComputedStyle(itemEl).marginBottom);
-      if (Number.isFinite(mb) && mb > 0) marginBottom = mb;
-    }
-    const h = wrapperH + marginBottom;
-    setRowSpan(Math.max(1, Math.ceil(h / MASONRY_ROW_HEIGHT_PX)));
+    setRowSpan(computeMasonryRowSpan(wrapperH, gapPx));
   }, [contentRef]);
 
   useEffect(() => {

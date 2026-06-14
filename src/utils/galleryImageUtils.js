@@ -9,6 +9,8 @@ export const GRID_THUMB_WIDTH_MOBILE = 600;
 export const GRID_THUMB_WIDTH_DESKTOP = 1200;
 export const VIEWER_THUMB_MAX_MOBILE = 1400;
 export const VIEWER_THUMB_MAX_DESKTOP = 2400;
+/** Max width requested for zoom / full-HD tier (Drive thumbnail + lh3). */
+export const VIEWER_MAX_WIDTH = 4096;
 
 const THUMB_EXT = ".webp";
 
@@ -161,40 +163,85 @@ export function getFullSizeSrc(image) {
   return paths.fullSize || image?.src || "";
 }
 
-export function getViewerDisplaySrc(image, viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1024) {
+/** Fast preview — sharp at fit-to-screen, loads quickly. */
+export function getViewerPreviewSrc(image, viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1024) {
   const paths = resolveImagePaths(image);
   if (isDriveImage(image)) {
     const id = image.driveFileId || parseDriveFileId(image.src);
-    return driveThumbnailUrl(id, getViewerThumbMax(viewportWidth)) || paths.fullSize || getThumbnailSrc(image);
+    return driveThumbnailUrl(id, getViewerThumbMax(viewportWidth)) || paths.thumbnail || "";
   }
-  if (isDesktopViewport(viewportWidth) && paths.fullSize) {
-    return paths.fullSize;
-  }
-  return paths.thumbnailMaxRes || paths.fullSize || getThumbnailSrc(image);
+  return paths.thumbnailMaxRes || paths.thumbnail || image?.src || "";
 }
 
-/** Ordered URLs to try in MediaViewer (Drive needs fallbacks + no-referrer). */
-export function getViewerSrcCandidates(image, viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1024) {
+/** Maximum quality for zoom / background HD upgrade. */
+export function getViewerMaxSrc(image) {
+  const paths = resolveImagePaths(image);
+  if (isDriveImage(image)) {
+    const id = image.driveFileId || parseDriveFileId(image.src);
+    if (!id) return paths.fullSize || "";
+    return (
+      driveLh3Url(id, VIEWER_MAX_WIDTH) ||
+      driveThumbnailUrl(id, VIEWER_MAX_WIDTH) ||
+      `https://drive.google.com/uc?export=view&id=${encodeURIComponent(id)}` ||
+      paths.fullSize ||
+      ""
+    );
+  }
+  return paths.fullSize || paths.thumbnailMaxRes || image?.src || "";
+}
+
+/** Preview fallbacks (display size, fast). */
+export function getViewerPreviewCandidates(image, viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1024) {
   if (isDriveImage(image)) {
     const id = image.driveFileId || parseDriveFileId(image.src);
     if (!id) return [];
-    const maxW = getViewerThumbMax(viewportWidth);
+    const displayW = getViewerThumbMax(viewportWidth);
     const midW = VIEWER_THUMB_MAX_MOBILE;
     return uniqueUrls([
-      driveThumbnailUrl(id, maxW),
-      driveLh3Url(id, maxW),
+      driveThumbnailUrl(id, displayW),
+      driveLh3Url(id, displayW),
       driveThumbnailUrl(id, midW),
       driveLh3Url(id, midW),
       `https://drive.google.com/uc?export=view&id=${encodeURIComponent(id)}`,
       driveThumbnailUrl(id, GRID_THUMB_WIDTH_DESKTOP),
-      driveThumbnailUrl(id, GRID_THUMB_WIDTH_MOBILE),
     ]);
   }
   const paths = resolveImagePaths(image);
   return uniqueUrls([
-    getViewerDisplaySrc(image, viewportWidth),
-    paths.fullSize,
+    getViewerPreviewSrc(image, viewportWidth),
     paths.thumbnailMaxRes,
-    getThumbnailSrc(image),
+    paths.thumbnail,
+    image?.src,
+  ]);
+}
+
+/** Max-quality fallbacks (zoom / HD tier). */
+export function getViewerMaxCandidates(image) {
+  if (isDriveImage(image)) {
+    const id = image.driveFileId || parseDriveFileId(image.src);
+    if (!id) return [];
+    return uniqueUrls([
+      driveLh3Url(id, VIEWER_MAX_WIDTH),
+      driveThumbnailUrl(id, VIEWER_MAX_WIDTH),
+      driveLh3Url(id, VIEWER_THUMB_MAX_DESKTOP),
+      driveThumbnailUrl(id, VIEWER_THUMB_MAX_DESKTOP),
+      `https://drive.google.com/uc?export=view&id=${encodeURIComponent(id)}`,
+      driveLh3Url(id, VIEWER_THUMB_MAX_MOBILE),
+      driveThumbnailUrl(id, VIEWER_THUMB_MAX_MOBILE),
+    ]);
+  }
+  const paths = resolveImagePaths(image);
+  return uniqueUrls([paths.fullSize, paths.thumbnailMaxRes, image?.src]);
+}
+
+export function getViewerDisplaySrc(image, viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1024) {
+  return getViewerPreviewSrc(image, viewportWidth);
+}
+
+/** @deprecated Prefer getViewerPreviewCandidates / getViewerMaxCandidates */
+export function getViewerSrcCandidates(image, viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1024) {
+  return uniqueUrls([
+    ...getViewerPreviewCandidates(image, viewportWidth),
+    ...getViewerMaxCandidates(image),
   ]);
 }

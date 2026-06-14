@@ -1,7 +1,13 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { X, ChevronLeft, ChevronRight, Download, Heart } from "lucide-react";
-import { getFullSizeSrc, getImageKey, getDriveImageEmbedProps, getViewerSrcCandidates, getGalleryImageAlt } from "../utils/galleryImageUtils";
+import { getFullSizeSrc, getImageKey, getDriveImageEmbedProps, getViewerPreviewCandidates, getViewerMaxCandidates, getGalleryImageAlt } from "../utils/galleryImageUtils";
+import {
+  getCachedMaxUrl,
+  getCachedPreviewUrl,
+  setCachedPreviewUrl,
+  preloadMaxQuality,
+} from "../utils/viewerImageCache";
 import { isImageLiked, toggleGalleryLike } from "../utils/galleryLikes";
 
 const MIN_SCALE = 1;
@@ -45,48 +51,99 @@ function getDefaultFullscreenRect() {
   };
 }
 
-function ViewerSlideImage({ image, slideIndex, shouldLoad, isLoaded, onLoaded, viewportWidth }) {
-  const candidates = React.useMemo(
-    () => getViewerSrcCandidates(image, viewportWidth),
+function ViewerSlideImage({
+  image,
+  slideIndex,
+  imageCacheKey,
+  shouldLoad,
+  isActive,
+  isPreviewLoaded,
+  onPreviewLoaded,
+  onMaxLoaded,
+  viewportWidth,
+}) {
+  const previewCandidates = React.useMemo(
+    () => getViewerPreviewCandidates(image, viewportWidth),
     [image, viewportWidth]
   );
-  const [candidateIndex, setCandidateIndex] = React.useState(0);
+  const maxCandidates = React.useMemo(() => getViewerMaxCandidates(image), [image]);
   const embedProps = getDriveImageEmbedProps(image);
 
+  const [previewIndex, setPreviewIndex] = React.useState(0);
+  const [previewSrc, setPreviewSrc] = React.useState(
+    () => getCachedPreviewUrl(imageCacheKey) || previewCandidates[0] || ""
+  );
+  const [maxSrc, setMaxSrc] = React.useState(() => getCachedMaxUrl(imageCacheKey) || "");
+  const [maxReady, setMaxReady] = React.useState(() => Boolean(getCachedMaxUrl(imageCacheKey)));
+
   React.useEffect(() => {
-    setCandidateIndex(0);
-  }, [image, slideIndex]);
+    setPreviewIndex(0);
+    const cachedPreview = getCachedPreviewUrl(imageCacheKey);
+    const cachedMax = getCachedMaxUrl(imageCacheKey);
+    setPreviewSrc(cachedPreview || previewCandidates[0] || "");
+    setMaxSrc(cachedMax || "");
+    setMaxReady(Boolean(cachedMax));
+  }, [image, imageCacheKey, previewCandidates]);
 
-  const src = shouldLoad ? candidates[candidateIndex] || "" : PLACEHOLDER_SRC;
+  React.useEffect(() => {
+    if (!shouldLoad || maxReady) return undefined;
+    let cancelled = false;
+    preloadMaxQuality(image, imageCacheKey, maxCandidates)
+      .then((url) => {
+        if (cancelled) return;
+        setMaxSrc(url);
+        setMaxReady(true);
+        onMaxLoaded(slideIndex, true);
+      })
+      .catch(() => {
+        if (!cancelled) onMaxLoaded(slideIndex, false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldLoad, maxReady, image, imageCacheKey, maxCandidates, slideIndex, onMaxLoaded]);
 
-  const handleLoad = (e) => {
-    if (e.currentTarget.naturalWidth > 0) onLoaded(slideIndex);
+  const previewUrl = shouldLoad ? previewCandidates[previewIndex] || previewSrc || "" : PLACEHOLDER_SRC;
+  const displaySrc =
+    isActive && maxSrc && maxReady ? maxSrc
+    : previewUrl || PLACEHOLDER_SRC;
+  const showPlaceholder = shouldLoad && !isPreviewLoaded && !maxReady;
+  const isHdDisplay = Boolean(maxSrc && displaySrc === maxSrc);
+
+  const handleImageLoad = (e) => {
+    if (e.currentTarget.naturalWidth <= 0) return;
+    if (isHdDisplay) {
+      onMaxLoaded(slideIndex, true);
+      return;
+    }
+    if (previewUrl) setCachedPreviewUrl(imageCacheKey, previewUrl);
+    onPreviewLoaded(slideIndex);
   };
 
-  const handleError = () => {
-    setCandidateIndex((idx) => (idx + 1 < candidates.length ? idx + 1 : idx));
+  const handleImageError = () => {
+    if (isHdDisplay) return;
+    setPreviewIndex((idx) => (idx + 1 < previewCandidates.length ? idx + 1 : idx));
   };
 
   return (
     <>
-      {!isLoaded && (
+      {showPlaceholder && (
         <div className="media-viewer-placeholder">
           <div className="media-viewer-placeholder__shimmer" />
         </div>
       )}
       <img
-        key={`${slideIndex}-${candidateIndex}`}
-        src={src || PLACEHOLDER_SRC}
+        src={displaySrc || PLACEHOLDER_SRC}
         alt={getGalleryImageAlt(image, slideIndex)}
-        className="media-viewer-full"
+        className={`media-viewer-full${isHdDisplay ? " media-viewer-full--hd" : ""}`}
         draggable={false}
         loading={shouldLoad ? "eager" : "lazy"}
         referrerPolicy={embedProps.referrerPolicy}
-        onLoad={handleLoad}
-        onError={handleError}
+        onLoad={handleImageLoad}
+        onError={handleImageError}
         style={{
-          opacity: isLoaded ? 1 : 0,
-          position: isLoaded ? "relative" : "absolute",
+          opacity: isPreviewLoaded || maxReady ? 1 : 0,
+          position: isPreviewLoaded || maxReady ? "relative" : "absolute",
           inset: 0,
         }}
       />
@@ -115,7 +172,8 @@ export default function MediaViewer({
   const [index, setIndex] = useState(initialIndex);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [fullResLoaded, setFullResLoaded] = useState({});
+  const [previewLoaded, setPreviewLoaded] = useState({});
+  const [maxLoaded, setMaxLoaded] = useState({});
   const [dismissOffset, setDismissOffset] = useState(0);
   const [carouselOffset, setCarouselOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -181,22 +239,30 @@ export default function MediaViewer({
     if (!el) return;
     const handleTouchMove = (e) => {
       onTouchMoveRef.current(e);
-      if (e.cancelable) e.preventDefault();
-    };
-    const handleTouchStart = (e) => {
-      if (e.touches.length === 1 && e.cancelable) e.preventDefault();
+      if (e.touches.length >= 2) {
+        if (e.cancelable) e.preventDefault();
+        return;
+      }
+      const mode = gestureModeRef.current;
+      if (
+        mode === "pinch" ||
+        mode === "pan" ||
+        mode === "dismiss" ||
+        mode === "carousel"
+      ) {
+        if (e.cancelable) e.preventDefault();
+      }
     };
     el.addEventListener("touchmove", handleTouchMove, { passive: false });
-    el.addEventListener("touchstart", handleTouchStart, { passive: false });
     return () => {
       el.removeEventListener("touchmove", handleTouchMove);
-      el.removeEventListener("touchstart", handleTouchStart);
     };
   }, []);
 
   const total = images.length;
   const currentImage = images[index];
-  const canZoom = fullResLoaded[index] === true;
+  const canZoom = previewLoaded[index] === true || maxLoaded[index] === true;
+  const maxReadyForCurrent = maxLoaded[index] === true;
   const currentImageKey = currentImage
     ? getImageKey(currentImage, categoryId, subAlbumId || "")
     : null;
@@ -209,8 +275,19 @@ export default function MediaViewer({
     setLikesVersion((v) => v + 1);
   }, [currentImageKey]);
 
-  const markSlideLoaded = useCallback((slideIndex) => {
-    setFullResLoaded((prev) => (prev[slideIndex] ? prev : { ...prev, [slideIndex]: true }));
+  const markPreviewLoaded = useCallback((slideIndex) => {
+    setPreviewLoaded((prev) => (prev[slideIndex] ? prev : { ...prev, [slideIndex]: true }));
+  }, []);
+
+  const markMaxLoaded = useCallback((slideIndex, success = true) => {
+    setMaxLoaded((prev) => {
+      const nextVal = success ? true : "failed";
+      if (prev[slideIndex] === nextVal) return prev;
+      return { ...prev, [slideIndex]: nextVal };
+    });
+    if (success) {
+      setPreviewLoaded((prev) => (prev[slideIndex] ? prev : { ...prev, [slideIndex]: true }));
+    }
   }, []);
 
   // Notify parent when index changes (for URL sync)
@@ -503,7 +580,6 @@ export default function MediaViewer({
         if (e.target === e.currentTarget && scale === 1) close();
       }}
       onWheel={onWheel}
-      style={{ touchAction: "none" }}
     >
       {/* Intro: ghost from thumbnail → fullscreen */}
       {introPhase === "running" && hasOrigin && originRect && fullscreenRect && (
@@ -601,7 +677,6 @@ export default function MediaViewer({
           onDoubleClick={onDoubleTapZoom}
           onClick={(e) => e.stopPropagation()}
           style={{
-            touchAction: "none",
             opacity: introPhase === "running" ? 0 : 1,
           }}
         >
@@ -624,10 +699,10 @@ export default function MediaViewer({
             }}
           >
             {images.map((img, i) => {
-              const displayLoaded = fullResLoaded[i];
               const inRange = Math.abs(i - index) <= 1;
-              const shouldLoad = displayLoaded || inRange;
+              const shouldLoad = inRange || previewLoaded[i] || maxLoaded[i];
               const isActive = i === index;
+              const imageCacheKey = getImageKey(img, categoryId, subAlbumId || "");
               return (
                 <div
                   key={i}
@@ -670,9 +745,12 @@ export default function MediaViewer({
                     <ViewerSlideImage
                       image={img}
                       slideIndex={i}
+                      imageCacheKey={imageCacheKey}
                       shouldLoad={shouldLoad}
-                      isLoaded={displayLoaded}
-                      onLoaded={markSlideLoaded}
+                      isActive={isActive}
+                      isPreviewLoaded={Boolean(previewLoaded[i])}
+                      onPreviewLoaded={markPreviewLoaded}
+                      onMaxLoaded={markMaxLoaded}
                       viewportWidth={viewportWidth}
                     />
                   </motion.div>
@@ -686,9 +764,9 @@ export default function MediaViewer({
         <div className="media-viewer-counter" aria-live="polite">
           {index + 1} / {total}
         </div>
-        {!canZoom && currentImage && (
+        {!maxReadyForCurrent && maxLoaded[index] !== "failed" && previewLoaded[index] && currentImage && (
           <div className="media-viewer-hd-loading" aria-live="polite">
-            Đang tải HD…
+            {scale > 1 ? "Đang tải ảnh gốc…" : "Đang tải HD…"}
           </div>
         )}
     </motion.div>

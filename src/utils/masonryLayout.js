@@ -14,15 +14,8 @@ export function getViewportMasonryGapPx() {
   return 16;
 }
 
-/** Read gap from computed grid styles (px). Never parse rem from CSS variables. */
-export function getMasonryGapPx(gridEl) {
-  if (gridEl) {
-    const styles = getComputedStyle(gridEl);
-    for (const prop of ["rowGap", "gap", "columnGap"]) {
-      const v = parseFloat(styles[prop]);
-      if (Number.isFinite(v) && v > 0) return v;
-    }
-  }
+/** Read vertical gap between masonry items (px). Matches --gallery-masonry-gap. */
+export function getMasonryGapPx(_gridEl) {
   return getViewportMasonryGapPx();
 }
 
@@ -40,9 +33,8 @@ export function estimateRowSpan(
     window.innerWidth <= 768 ? 2 : MASONRY_COLUMN_COUNT;
   const gridGap = gapPx;
   const colW = (containerW - gridGap * (columns - 1)) / columns;
-  const h = colW / aspectRatio;
-  const unit = MASONRY_ROW_HEIGHT_PX + gridGap;
-  return Math.max(1, Math.ceil((h + gridGap) / unit));
+  const h = colW / aspectRatio + gridGap;
+  return Math.max(1, Math.ceil(h / MASONRY_ROW_HEIGHT_PX));
 }
 
 export function useMasonryRowSpan(contentRef, initialAspectRatio = DEFAULT_ASPECT_RATIO) {
@@ -52,12 +44,17 @@ export function useMasonryRowSpan(contentRef, initialAspectRatio = DEFAULT_ASPEC
   const recalcSpan = useCallback(() => {
     const wrapper = contentRef.current;
     if (!wrapper) return;
-    const grid = wrapper.closest(".gallery__masonry");
-    const rowGapPx = getMasonryGapPx(grid);
-    const h = wrapper.getBoundingClientRect().height;
-    if (h <= 0) return;
-    const unit = MASONRY_ROW_HEIGHT_PX + rowGapPx;
-    setRowSpan(Math.max(1, Math.ceil((h + rowGapPx) / unit)));
+    const itemEl = wrapper.closest(".gallery__item");
+    const gapPx = getMasonryGapPx();
+    const wrapperH = wrapper.getBoundingClientRect().height;
+    if (wrapperH <= 0) return;
+    let marginBottom = gapPx;
+    if (itemEl) {
+      const mb = parseFloat(getComputedStyle(itemEl).marginBottom);
+      if (Number.isFinite(mb) && mb > 0) marginBottom = mb;
+    }
+    const h = wrapperH + marginBottom;
+    setRowSpan(Math.max(1, Math.ceil(h / MASONRY_ROW_HEIGHT_PX)));
   }, [contentRef]);
 
   useEffect(() => {

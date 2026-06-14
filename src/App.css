@@ -1342,8 +1342,7 @@
     grid-auto-rows: 8px;
     grid-auto-flow: row dense;
     column-gap: var(--gallery-masonry-gap);
-    row-gap: var(--gallery-masonry-gap);
-    gap: var(--gallery-masonry-gap);
+    row-gap: 0;
 }
 
 .gallery__item {
@@ -1353,6 +1352,7 @@
     cursor: pointer;
     align-self: start;
     width: 100%;
+    margin-bottom: var(--gallery-masonry-gap);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
     min-height: 0;
 }

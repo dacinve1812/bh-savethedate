@@ -48,20 +48,27 @@ function decodeHtml(text) {
     .replace(/&#39;/g, "'");
 }
 
+function compareFilenames(a, b) {
+  return String(a).localeCompare(String(b), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
 function parseFolderHtml(html) {
   const items = [];
   const seen = new Set();
   const entryRe =
-    /class="flip-entry" id="entry-([^"]+)"[\s\S]*?href="https:\/\/drive\.google\.com\/file\/d\/([^/]+)\/view[^"]*"[\s\S]*?alt="([^"]*)"/g;
+    /class="flip-entry" id="entry-([^"]+)"[\s\S]*?href="https:\/\/drive\.google\.com\/file\/d\/([^/]+)\/view[^"]*"[\s\S]*?class="flip-entry-title"[^>]*>([^<]+)/g;
   let m;
   while ((m = entryRe.exec(html)) !== null) {
     const fileId = m[2] || m[1];
     if (!fileId || seen.has(fileId)) continue;
     seen.add(fileId);
-    const alt = decodeHtml(m[3] || "").trim();
+    const name = decodeHtml(m[3] || "").trim();
     items.push({
       fileId,
-      alt: alt && !/^jpe?g image$/i.test(alt) ? alt : `Photo ${items.length + 1}`,
+      alt: name || `Photo ${items.length + 1}`,
     });
   }
 
@@ -75,6 +82,8 @@ function parseFolderHtml(html) {
     }
   }
 
+  // Drive folder UI sorts by name (numeric-aware). embeddedfolderview is lexicographic only.
+  items.sort((a, b) => compareFilenames(a.alt, b.alt));
   return items;
 }
 

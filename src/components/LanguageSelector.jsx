@@ -3,11 +3,11 @@ import { motion } from 'framer-motion';
 import { useLanguage } from '../contexts/LanguageContext';
 import { translations } from '../translations';
 
-export default function LanguageSelector({ onSelect, isOpen: controlledIsOpen = true, onClose }) {
+export default function LanguageSelector({ onSelect, onSeeAlbum, isOpen: controlledIsOpen = true, onClose }) {
   const { language, setLanguage } = useLanguage();
   
-  // Use controlled state if provided
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : true;
+  const t = translations[language] || translations.en;
 
   const handleSelect = (lang) => {
     setLanguage(lang);
@@ -29,9 +29,8 @@ export default function LanguageSelector({ onSelect, isOpen: controlledIsOpen = 
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[60] flex items-center justify-center bg-neutral-950/88"
       onClick={(e) => {
-        // Close on backdrop click if no selection made
         if (e.target === e.currentTarget && !language) {
-          handleSelect('en'); // Default to English if clicked outside
+          handleSelect('en');
         }
       }}
     >
@@ -43,13 +42,24 @@ export default function LanguageSelector({ onSelect, isOpen: controlledIsOpen = 
         className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-[90%] mx-4"
         onClick={(e) => e.stopPropagation()}
       >
-        
         <div className="flex flex-col gap-4">
+          {onSeeAlbum && (
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onSeeAlbum}
+              className="px-6 py-4 rounded-xl bg-[#5c6f54] text-white font-medium text-lg transition-colors hover:bg-[#4a5a44]"
+            >
+              {t.seeAlbum}
+            </motion.button>
+          )}
+
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => handleSelect('vi')}
-            className="px-6 py-4 rounded-xl bg-[#5c6f54] text-white font-medium text-lg transition-colors hover:bg-[#4a5a44]"
+            className="px-6 py-4 rounded-xl bg-[#f6f7ef] text-[#253126] border-2 border-[#5c6f54] font-medium text-lg transition-colors hover:bg-[#e8ebe4]"
           >
             {translations.vi.vietnamese}
           </motion.button>
@@ -62,9 +72,9 @@ export default function LanguageSelector({ onSelect, isOpen: controlledIsOpen = 
           >
             {translations.en.english}
           </motion.button>
+
         </div>
       </motion.div>
     </motion.div>
   );
 }
-

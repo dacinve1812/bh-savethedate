@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import envelopeImg from "../public/envelope.png"; // ảnh envelope nội bộ
 import InvitationBody from "./InvitationBody";
-import RSVPPage from "./RSVPPage";
 import AdminGalleryPage from "./pages/AdminGalleryPage";
 import FindYourSeatPage from "./pages/FindYourSeatPage";
 import AdminSeatingPage from "./pages/AdminSeatingPage";
@@ -12,6 +11,7 @@ import AdminEventHighlightsPage from "./pages/AdminEventHighlightsPage";
 import MusicPlayer from "./MusicPlayer";
 import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
 import LanguageSelector from "./components/LanguageSelector";
+import { buildGalleryHash, DEFAULT_GALLERY_CATEGORY, isGalleryHash } from "./utils/galleryHash";
 import { translations } from "./translations";
 import "./App.css";
 
@@ -38,7 +38,7 @@ export default function WeddingSite() {
     <LanguageProvider>
     <Router>
       <Routes>
-          <Route path="/rsvp" element={<RSVPPageWithMusic />} />
+          <Route path="/rsvp" element={<Navigate to={{ pathname: "/", hash: buildGalleryHash() }} replace />} />
         <Route path="/find-your-seat" element={<FindYourSeatPage />} />
         <Route path="/event-highlights" element={<EventHighlightsPage />} />
         <Route path="/admin" element={<AdminGalleryPage />} />
@@ -51,22 +51,10 @@ export default function WeddingSite() {
   );
 }
 
-function RSVPPageWithMusic() {
-  return (
-    <>
-      <RSVPPage />
-      <MusicPlayer audioSrc="/music.m4a" />
-    </>
-  );
-}
-
 function HomePage() {
   const galleryHash =
     typeof window !== "undefined" &&
-    (() => {
-      const raw = window.location.hash.slice(1);
-      return raw === "gallery" || raw.startsWith("gallery/");
-    })();
+    isGalleryHash(window.location.hash.slice(1));
 
   const [isOpen, setIsOpen] = useState(() => Boolean(galleryHash));
   const [tab, setTab] = useState(() => (galleryHash ? "gallery" : "home"));
@@ -81,8 +69,7 @@ function HomePage() {
       setShowLanguageModal(false);
     } else {
       const raw = window.location.hash.slice(1);
-      const toGallery = raw === "gallery" || raw.startsWith("gallery/");
-      if (!toGallery) {
+      if (!isGalleryHash(raw)) {
         setShowLanguageModal(true);
       }
     }
@@ -92,13 +79,21 @@ function HomePage() {
     setShowLanguageModal(false);
   };
 
+  const handleSeeAlbum = () => {
+    setShowLanguageModal(false);
+    setIsOpen(true);
+    setTab("gallery");
+    window.location.hash = `#${buildGalleryHash({ category: DEFAULT_GALLERY_CATEGORY })}`;
+  };
+
   return (
     <div className="min-h-screen bg-[#f6f7ef] text-[#1c2321]">
       {/* Language Selector Modal - hiển thị ở initial page (trước envelope) */}
       {!isOpen && showLanguageModal && (
         <LanguageSelector 
           key="language-selector"
-          onSelect={handleLanguageSelect} 
+          onSelect={handleLanguageSelect}
+          onSeeAlbum={handleSeeAlbum}
           isOpen={showLanguageModal}
           onClose={() => setShowLanguageModal(false)}
         />

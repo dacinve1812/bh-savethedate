@@ -17,6 +17,21 @@ export const translations = {
     // Gallery
     galleryEyebrow: "Our Memories",
     galleryTitle: "Pre-Wedding Gallery",
+    galleryEmpty: "Photos coming soon.",
+    galleryEmptyLiked: "No liked photos in this album yet.",
+    galleryShowAll: "All photos",
+    galleryCategoryLabels: {
+      "pre-wedding": "Pre-Wedding",
+      "phong-su": "Hình Phóng Sự",
+      "truyen-thong": "Hình Truyền thống",
+      photobooth: "Photobooth",
+    },
+    galleryCategoryTitles: {
+      "pre-wedding": "Pre-wedding",
+      "phong-su": "Hình Phóng Sự",
+      "truyen-thong": "Hình Truyền thống",
+      photobooth: "Photobooth",
+    },
     
     // Schedule
     scheduleEyebrow: "The Day's Events",
@@ -38,7 +53,12 @@ export const translations = {
     googleMaps: "Google Maps",
     appleMaps: "Apple Maps",
     
-    // RSVP
+    // Album (replaces RSVP CTA on home)
+    albumMessage: "See more wedding photos of Bao and Hau here.",
+    albumButton: "See Album",
+    seeAlbum: "See Album",
+    
+    // RSVP (legacy — page hidden)
     rsvpMessage: "We would sincerely appreciate your response to facilitate our preparations.",
     rsvpButton: "RSVP",
     rsvpTitle: "RSVP",
@@ -96,6 +116,21 @@ export const translations = {
     // Gallery
     galleryEyebrow: "Những khoảnh khắc",
     galleryTitle: "Thư viện ảnh tiền hôn lễ",
+    galleryEmpty: "Ảnh sẽ được cập nhật sớm.",
+    galleryEmptyLiked: "Chưa có ảnh được thích trong album này.",
+    galleryShowAll: "Tất cả ảnh",
+    galleryCategoryLabels: {
+      "pre-wedding": "Pre-Wedding",
+      "phong-su": "Hình Phóng Sự",
+      "truyen-thong": "Hình Truyền thống",
+      photobooth: "Photobooth",
+    },
+    galleryCategoryTitles: {
+      "pre-wedding": "Pre-wedding",
+      "phong-su": "Hình Phóng Sự",
+      "truyen-thong": "Hình truyền thống",
+      photobooth: "Photobooth",
+    },
     
     // Schedule
     scheduleEyebrow: "Chuỗi sự kiện",
@@ -116,7 +151,12 @@ export const translations = {
     openInMaps: "Mở bản đồ",
 
     
-    // RSVP
+    // Album (replaces RSVP CTA on home)
+    albumMessage: "Xem thêm ảnh cưới của Bảo và Hậu tại đây.",
+    albumButton: "Xem Album Ảnh",
+    seeAlbum: "Xem Album Ảnh",
+    
+    // RSVP (legacy — page hidden)
     rsvpMessage: "Để gia đình chúng tôi có thể chuẩn bị tiệc cưới được chu toàn, kính mong Quý khách vui lòng phúc đáp.",
     rsvpButton: "Phúc Đáp",
     rsvpTitle: "Phúc Đáp",

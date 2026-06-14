@@ -1,30 +1,15 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { X, ChevronLeft, ChevronRight, Download } from "lucide-react";
-import { getOptimizedImagePaths } from "../Gallery";
-
-const getThumbnailSrc = (image) => {
-  if (image?.thumbnail) return image.thumbnail;
-  if (image?.src) {
-    const paths = getOptimizedImagePaths(image.src);
-    return paths.thumbnailMaxRes || paths.thumbnail || image.src;
-  }
-  return image?.src || "";
-};
-
-const getFullSizeSrc = (image) => {
-  if (image?.fullSize) return image.fullSize;
-  if (image?.src) {
-    const paths = getOptimizedImagePaths(image.src);
-    return paths.fullSize || image.src;
-  }
-  return image?.src || "";
-};
+import { X, ChevronLeft, ChevronRight, Download, Heart } from "lucide-react";
+import { getFullSizeSrc, getImageKey, getDriveImageEmbedProps, getViewerSrcCandidates, getGalleryImageAlt } from "../utils/galleryImageUtils";
+import { isImageLiked, toggleGalleryLike } from "../utils/galleryLikes";
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const DISMISS_THRESHOLD = 120;
 const SWIPE_CAROUSEL_THRESHOLD = 60;
+const PLACEHOLDER_SRC =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 /** Thời gian (ms) của animation intro: thumbnail → fullscreen (ghost). */
 const INTRO_DURATION_MS = 0;
 
@@ -60,6 +45,55 @@ function getDefaultFullscreenRect() {
   };
 }
 
+function ViewerSlideImage({ image, slideIndex, shouldLoad, isLoaded, onLoaded, viewportWidth }) {
+  const candidates = React.useMemo(
+    () => getViewerSrcCandidates(image, viewportWidth),
+    [image, viewportWidth]
+  );
+  const [candidateIndex, setCandidateIndex] = React.useState(0);
+  const embedProps = getDriveImageEmbedProps(image);
+
+  React.useEffect(() => {
+    setCandidateIndex(0);
+  }, [image, slideIndex]);
+
+  const src = shouldLoad ? candidates[candidateIndex] || "" : PLACEHOLDER_SRC;
+
+  const handleLoad = (e) => {
+    if (e.currentTarget.naturalWidth > 0) onLoaded(slideIndex);
+  };
+
+  const handleError = () => {
+    setCandidateIndex((idx) => (idx + 1 < candidates.length ? idx + 1 : idx));
+  };
+
+  return (
+    <>
+      {!isLoaded && (
+        <div className="media-viewer-placeholder">
+          <div className="media-viewer-placeholder__shimmer" />
+        </div>
+      )}
+      <img
+        key={`${slideIndex}-${candidateIndex}`}
+        src={src || PLACEHOLDER_SRC}
+        alt={getGalleryImageAlt(image, slideIndex)}
+        className="media-viewer-full"
+        draggable={false}
+        loading="lazy"
+        referrerPolicy={embedProps.referrerPolicy}
+        onLoad={handleLoad}
+        onError={handleError}
+        style={{
+          opacity: isLoaded ? 1 : 0,
+          position: isLoaded ? "relative" : "absolute",
+          inset: 0,
+        }}
+      />
+    </>
+  );
+}
+
 export default function MediaViewer({
   initialIndex = 0,
   images = [],
@@ -67,6 +101,7 @@ export default function MediaViewer({
   originSrc = null,
   onClose,
   onIndexChange,
+  categoryId = "pre-wedding",
 }) {
   const hasOrigin = originRect && typeof originRect.left === "number" && originSrc;
   const [introPhase, setIntroPhase] = useState(hasOrigin ? "running" : "done");
@@ -84,6 +119,7 @@ export default function MediaViewer({
   const [dismissOffset, setDismissOffset] = useState(0);
   const [carouselOffset, setCarouselOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [likesVersion, setLikesVersion] = useState(0);
 
   const [viewportWidth, setViewportWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 1024
@@ -103,6 +139,12 @@ export default function MediaViewer({
   const DOUBLE_TAP_PX = 40;
   const TAP_MOVE_PX = 18;
   const DOUBLE_TAP_ZOOM = 2;
+
+  useEffect(() => {
+    const onLikes = () => setLikesVersion((v) => v + 1);
+    window.addEventListener("gallery_likes_updated", onLikes);
+    return () => window.removeEventListener("gallery_likes_updated", onLikes);
+  }, []);
 
   useEffect(() => {
     const onResize = () => setViewportWidth(window.innerWidth);
@@ -148,25 +190,20 @@ export default function MediaViewer({
 
   const total = images.length;
   const currentImage = images[index];
-  const fullSrc = currentImage ? getFullSizeSrc(currentImage) : "";
   const canZoom = fullResLoaded[index] === true;
+  const currentImageKey = currentImage ? getImageKey(currentImage, categoryId) : null;
+  void likesVersion;
+  const liked = currentImageKey ? isImageLiked(currentImageKey) : false;
 
-  // Preload full for current slide and neighbors; start as soon as viewer is open
-  useEffect(() => {
-    const toLoad = [];
-    for (let i = Math.max(0, index - 1); i <= Math.min(images.length - 1, index + 1); i++) {
-      if (images[i] && !fullResLoaded[i]) toLoad.push({ i, img: images[i] });
-    }
-    toLoad.forEach(({ i, img }) => {
-      const fullSrc = getFullSizeSrc(img);
-      if (!fullSrc) return;
-      const el = new Image();
-      el.onload = () => setFullResLoaded((prev) => ({ ...prev, [i]: true }));
-      el.onerror = () => {};
-      el.src = fullSrc;
-    });
-  }, [index, images, fullResLoaded]);
+  const handleToggleLike = useCallback(() => {
+    if (!currentImageKey) return;
+    toggleGalleryLike(currentImageKey);
+    setLikesVersion((v) => v + 1);
+  }, [currentImageKey]);
 
+  const markSlideLoaded = useCallback((slideIndex) => {
+    setFullResLoaded((prev) => (prev[slideIndex] ? prev : { ...prev, [slideIndex]: true }));
+  }, []);
 
   // Notify parent when index changes (for URL sync)
   useEffect(() => {
@@ -465,6 +502,7 @@ export default function MediaViewer({
         <motion.img
           src={originSrc}
           alt=""
+          referrerPolicy="no-referrer"
           className="media-viewer-intro"
           draggable={false}
           style={{ position: "fixed", objectFit: "cover" }}
@@ -508,6 +546,18 @@ export default function MediaViewer({
             aria-label="Download"
           >
             <Download size={24} />
+          </button>
+        )}
+
+        {currentImage && (
+          <button
+            type="button"
+            className={`media-viewer-like ${liked ? "media-viewer-like--active" : ""}`}
+            onClick={handleToggleLike}
+            aria-label={liked ? "Unlike" : "Like"}
+            aria-pressed={liked}
+          >
+            <Heart size={24} fill={liked ? "currentColor" : "none"} strokeWidth={1.75} />
           </button>
         )}
 
@@ -566,11 +616,9 @@ export default function MediaViewer({
             }}
           >
             {images.map((img, i) => {
-              const thumb = getThumbnailSrc(img);
-              const full = getFullSizeSrc(img);
-              const fullLoaded = fullResLoaded[i];
+              const displayLoaded = fullResLoaded[i];
               const inRange = Math.abs(i - index) <= 1;
-              const shouldLoadFull = fullLoaded || inRange;
+              const shouldLoad = displayLoaded || inRange;
               const isActive = i === index;
               return (
                 <div
@@ -611,34 +659,13 @@ export default function MediaViewer({
                       opacity: 1,
                     }}
                   >
-                    {!fullLoaded && (
-                      <div className="media-viewer-placeholder">
-                        <div className="media-viewer-placeholder__shimmer" />
-                        <img
-                          src={thumb}
-                          alt=""
-                          className="media-viewer-thumb"
-                          draggable={false}
-                        />
-                      </div>
-                    )}
-                    <img
-                      src={shouldLoadFull ? full : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"}
-                      alt={img?.alt || `Image ${i + 1}`}
-                      className="media-viewer-full"
-                      draggable={false}
-                      loading="lazy"
-                      onLoad={(e) => {
-                        if (fullResLoaded[i]) return;
-                        if (e.target.currentSrc && e.target.currentSrc.includes("/images/full/"))
-                          setFullResLoaded((prev) => ({ ...prev, [i]: true }));
-                      }}
-                      onError={() => {}}
-                      style={{
-                        opacity: fullLoaded ? 1 : 0,
-                        position: fullLoaded ? "relative" : "absolute",
-                        inset: 0,
-                      }}
+                    <ViewerSlideImage
+                      image={img}
+                      slideIndex={i}
+                      shouldLoad={shouldLoad}
+                      isLoaded={displayLoaded}
+                      onLoaded={markSlideLoaded}
+                      viewportWidth={viewportWidth}
                     />
                   </motion.div>
                 </div>

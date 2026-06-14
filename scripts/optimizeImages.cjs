@@ -26,8 +26,8 @@ const CONFIG = {
   fallbackInputDir: path.join(__dirname, '../public'),
   thumbnailsDir: path.join(__dirname, '../public/images/thumbnails'),
   fullDir: path.join(__dirname, '../public/images/full'),
-  // 4 size: 240/400/600/800 — tại 432px 50vw≈216px, DPR3 cần 648px nên cần 800w
-  thumbnailWidths: [240, 400, 600, 800],
+  // Grid srcset + viewer max thumb; desktop grid picks up to 1200w via sizes
+  thumbnailWidths: [400, 600, 800, 1000, 1200],
   thumbnailFormat: 'webp',
   thumbnailQuality: 80,
   fullQuality: 85,

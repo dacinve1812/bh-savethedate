@@ -9,9 +9,14 @@ import Schedule from "./Schedule";
 import FormalInvitation from "./FormalInvitation";
 import Location from "./Location";
 import RSVP from "./RSVP";
-import RSVPPage from "./RSVPPage";
-import Gallery, { useEffectiveGalleryImages } from "./Gallery";
+import Gallery, { useGalleryCategoryImages } from "./Gallery";
 import MediaViewer from "./components/MediaViewer";
+import {
+  buildGalleryHash,
+  DEFAULT_GALLERY_CATEGORY,
+  parseGalleryHash,
+} from "./utils/galleryHash";
+import { getCategoryImages, getStoredOrder } from "./hooks/useGalleryCategoryImages";
 
 export default function InvitationBody({
   tab,
@@ -29,7 +34,11 @@ export default function InvitationBody({
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [tab]);
 
-  const galleryImages = useEffectiveGalleryImages();
+  const [galleryCategory, setGalleryCategory] = React.useState(() => {
+    const parsed = parseGalleryHash(window.location.hash.slice(1));
+    return parsed?.category ?? DEFAULT_GALLERY_CATEGORY;
+  });
+  const galleryImages = useGalleryCategoryImages(galleryCategory);
   const [scrollToIndex, setScrollToIndex] = React.useState(null);
   const lightboxIndex =
     lightbox == null
@@ -40,40 +49,60 @@ export default function InvitationBody({
   const lightboxOrigin =
     typeof lightbox === "object" && lightbox?.origin ? lightbox.origin : null;
 
-  // Update URL hash: viewer open => #gallery/photo/N (deep link), else #tab
+  const handleGalleryCategoryChange = React.useCallback((categoryId) => {
+    setGalleryCategory(categoryId);
+    setScrollToIndex(null);
+    if (lightboxIndex == null) {
+      window.location.hash = `#${buildGalleryHash({ category: categoryId })}`;
+    }
+  }, [lightboxIndex]);
+
+  // Update URL hash for gallery album + optional lightbox photo
   React.useEffect(() => {
-    if (lightboxIndex !== null && lightboxIndex !== undefined) {
-      window.location.hash = `#gallery/photo/${lightboxIndex}`;
-    } else if (tab && tab !== "home") {
+    if (tab === "gallery") {
+      if (lightboxIndex !== null && lightboxIndex !== undefined) {
+        window.location.hash = `#${buildGalleryHash({
+          category: galleryCategory,
+          photoIndex: lightboxIndex,
+        })}`;
+      } else {
+        window.location.hash = `#${buildGalleryHash({ category: galleryCategory })}`;
+      }
+      return;
+    }
+    if (tab && tab !== "home") {
       window.location.hash = `#${tab}`;
     } else {
       window.location.hash = "";
     }
-  }, [tab, lightboxIndex]);
+  }, [tab, lightboxIndex, galleryCategory]);
 
   // Read hash on mount and on hashchange (deep link + back button)
   React.useEffect(() => {
     const applyHash = () => {
       const raw = window.location.hash.slice(1);
-      const photoMatch = raw.match(/^gallery\/photo\/(\d+)$/);
-      if (photoMatch) {
-        const n = parseInt(photoMatch[1], 10);
-        if (n >= 0 && n < galleryImages.length) {
-          onTabChange("gallery");
-          onLightbox(n);
-          return;
-        }
-      }
-      if (raw === "gallery") {
-        onLightbox(null);
+      const parsed = parseGalleryHash(raw);
+      if (parsed) {
         onTabChange("gallery");
-        return; // Don't scroll – user may have just closed viewer, keep scroll position
+        setGalleryCategory(parsed.category);
+        if (parsed.photoIndex != null) {
+          const count = getCategoryImages(parsed.category, getStoredOrder()).length;
+          if (parsed.photoIndex < count) {
+            onLightbox(parsed.photoIndex);
+          } else {
+            onLightbox(null);
+          }
+        } else {
+          onLightbox(null);
+        }
+        return;
       }
       if (raw === "rsvp") {
         onLightbox(null);
-        onTabChange("rsvp");
-      } else if (raw && ["gallery", "rsvp"].includes(raw)) {
-        onTabChange(raw);
+        onTabChange("gallery");
+        setGalleryCategory(DEFAULT_GALLERY_CATEGORY);
+        window.location.hash = `#${buildGalleryHash({ category: DEFAULT_GALLERY_CATEGORY })}`;
+        return;
       }
       window.scrollTo({ top: 0, behavior: "instant" });
     };
@@ -92,7 +121,7 @@ export default function InvitationBody({
           <ChanceEncounter key="chance" />
           <Schedule key="schedule" />
           <Location key="location" />
-          <RSVP key="rsvp" onRSVPClick={() => onTabChange("rsvp")} />
+          <RSVP key="album-cta" onGalleryClick={() => onTabChange("gallery")} />
           <FormalInvitation key="formal-invitation" />
           
         </>
@@ -104,6 +133,8 @@ export default function InvitationBody({
           ) : tab === "gallery" ? (
             <Gallery
               key="gallery"
+              category={galleryCategory}
+              onCategoryChange={handleGalleryCategoryChange}
               images={galleryImages}
               scrollToIndex={scrollToIndex}
               onScrollToComplete={() => setScrollToIndex(null)}
@@ -115,8 +146,6 @@ export default function InvitationBody({
                 }
               }}
             />
-          ) : tab === "rsvp" ? (
-            <RSVPPage key="rsvp" showHeader={false} />
           ) : null}
         </AnimatePresence>
       </main>
@@ -129,6 +158,7 @@ export default function InvitationBody({
             originRect={lightboxOrigin?.rect ?? null}
             originSrc={lightboxOrigin?.src ?? null}
             images={galleryImages}
+            categoryId={galleryCategory}
             onClose={() => {
               const idx = lightboxIndex;
               onLightbox(null);

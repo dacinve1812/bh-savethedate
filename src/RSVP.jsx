@@ -3,18 +3,12 @@ import { motion } from "framer-motion";
 import { useLanguage } from "./contexts/LanguageContext";
 import { translations } from "./translations";
 
-const rsvpMedia = {
-    rsvpImage: "/feature-hero-desktop.jpg",
-};
-
-export default function RSVP({ onRSVPClick }) {
+export default function RSVP({ onGalleryClick }) {
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
-  
-  const handleRSVPClick = () => {
-    if (onRSVPClick) {
-      onRSVPClick();
-    }
+
+  const handleClick = () => {
+    if (onGalleryClick) onGalleryClick();
   };
 
   return (
@@ -28,10 +22,9 @@ export default function RSVP({ onRSVPClick }) {
             viewport={{ once: false, amount: 0.2 }}
             transition={{
               duration: 0.8,
-              ease: [0.25, 0.1, 0.25, 1]
+              ease: [0.25, 0.1, 0.25, 1],
             }}
-          >
-          </motion.div>
+          />
           <motion.p
             className="rsvp__message"
             initial={{ opacity: 0, y: 20 }}
@@ -40,10 +33,10 @@ export default function RSVP({ onRSVPClick }) {
             transition={{
               duration: 0.7,
               delay: 0.2,
-              ease: [0.25, 0.1, 0.25, 1]
+              ease: [0.25, 0.1, 0.25, 1],
             }}
           >
-            {t.rsvpMessage || "We hope to have you join us"}
+            {t.albumMessage}
           </motion.p>
           <motion.button
             className="rsvp__button"
@@ -53,15 +46,14 @@ export default function RSVP({ onRSVPClick }) {
             transition={{
               duration: 0.7,
               delay: 0.3,
-              ease: [0.25, 0.1, 0.25, 1]
+              ease: [0.25, 0.1, 0.25, 1],
             }}
-            onClick={handleRSVPClick}
+            onClick={handleClick}
           >
-            {t.rsvpButton}
+            {t.albumButton}
           </motion.button>
         </div>
       </div>
     </section>
   );
 }
-

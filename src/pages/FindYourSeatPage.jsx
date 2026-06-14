@@ -22,7 +22,9 @@ const fadeUp = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] } },
 };
 
-const galleryLink = { pathname: "/", hash: "gallery" };
+import { buildGalleryHash } from "../utils/galleryHash";
+
+const galleryLink = { pathname: "/", hash: buildGalleryHash({ category: "pre-wedding" }) };
 
 function SearchAgainButton({ onClick, className = "" }) {
   return (

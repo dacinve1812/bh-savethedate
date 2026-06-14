@@ -1,152 +1,255 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
+import { ImageIcon, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { useLanguage } from "./contexts/LanguageContext";
 import { translations } from "./translations";
+import { GALLERY_CATEGORY_IDS, GALLERY_CATEGORY_TITLES } from "./galleryCategories";
+import { useGalleryCategoryImages } from "./hooks/useGalleryCategoryImages";
+import {
+  resolveImagePaths,
+  getThumbnailSrc,
+  getFullSizeSrc,
+  getImageKey,
+  getDriveImageEmbedProps,
+  getDriveThumbnailFallbacks,
+  getGalleryImageAlt,
+  getGridThumbWidth,
+  isDriveImage,
+} from "./utils/galleryImageUtils";
+import {
+  getGalleryLikes,
+  isImageLiked,
+  toggleGalleryLike,
+  countGalleryLikes,
+} from "./utils/galleryLikes";
 
-// ============================================
-// GALLERY IMAGES – tự động + cấu hình chọn/sắp xếp
-// ============================================
-// - galleryImages.generated.js: tất cả ảnh trong public/images/original/ (sau npm run optimize-images)
-// - galleryConfig.js: GALLERY_ORDER – thứ tự mặc định (file).
-// - localStorage "gallery_order": thứ tự từ trang Admin (ưu tiên nếu có).
-// Ảnh mới có trong .generated nhưng chưa nằm trong order → tự nối vào cuối (không cần sửa galleryConfig).
-import { GALLERY_IMAGES as ALL_IMAGES } from "./galleryImages.generated";
-import { GALLERY_ORDER } from "./galleryConfig";
-
-const STORAGE_KEY = "gallery_order";
-
-function getAltFromSrc(src) {
-  const name = src.replace(/^.*\//, "").replace(/\.[^.]*$/, "");
-  return name || "Image";
-}
-
-function getStoredOrder() {
-  if (typeof window === "undefined") return null;
-  try {
-    const s = localStorage.getItem(STORAGE_KEY);
-    if (!s) return null;
-    const a = JSON.parse(s);
-    return Array.isArray(a) && a.length > 0 ? a : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Order + mọi src trong generated chưa có trong order (chỉ khi dùng GALLERY_ORDER mặc định — không áp dụng khi Admin đã lưu localStorage). */
-function mergeOrderWithAllImages(order) {
-  if (!order || order.length === 0) return null;
-  const seen = new Set(order);
-  const extras = ALL_IMAGES.map((img) => img.src).filter((src) => !seen.has(src));
-  return extras.length ? [...order, ...extras] : order;
-}
-
-function buildListFromOrder(order, { mergeNewFromGenerated = true } = {}) {
-  if (!order || order.length === 0) return ALL_IMAGES;
-  const merged = mergeNewFromGenerated ? mergeOrderWithAllImages(order) : null;
-  const srcList = merged ?? order;
-  return srcList.map(
-    (src) =>
-      ALL_IMAGES.find((img) => img.src === src) || {
-        src,
-        alt: getAltFromSrc(src),
-      }
-  );
-}
-
-const _storedOrderOnLoad =
-  typeof window !== "undefined" ? getStoredOrder() : null;
-const _initialOrder = _storedOrderOnLoad || GALLERY_ORDER;
-const GALLERY_IMAGES = buildListFromOrder(_initialOrder, {
-  mergeNewFromGenerated: typeof window === "undefined" || _storedOrderOnLoad == null,
-});
-
-export { GALLERY_IMAGES, STORAGE_KEY };
-
-/** Hook: danh sách gallery có tính cả thứ tự lưu trong Admin (localStorage). Cập nhật khi storage thay đổi. */
-export function useEffectiveGalleryImages() {
-  const [order, setOrder] = useState(() => getStoredOrder());
-  useEffect(() => {
-    const sync = () => setOrder(getStoredOrder());
-    window.addEventListener("storage", sync);
-    window.addEventListener("gallery_order_updated", sync);
-    return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener("gallery_order_updated", sync);
-    };
-  }, []);
-  const effectiveOrder = order ?? GALLERY_ORDER;
-  const mergeNewFromGenerated = order == null;
-  return useMemo(
-    () =>
-      buildListFromOrder(effectiveOrder, { mergeNewFromGenerated }),
-    [effectiveOrder?.join(","), mergeNewFromGenerated]
-  );
-}
-
-// Thumbnail widths phải khớp với script optimizeImages.cjs (240, 400, 600, 800)
-const THUMB_WIDTHS = [240, 400, 600, 800];
-const THUMB_EXT = '.webp';
-
-// Helper function để convert tên file gốc sang format của optimized images
-// Script tạo: thumbnails/safeBaseName-240.webp, -400.webp, -600.webp, -800.webp
-// Logic phải giống hệt script optimizeImages.cjs
-// Export để dùng chung trong InvitationBody / MediaViewer
-export function getOptimizedImagePaths(originalSrc) {
-  if (!originalSrc) return { thumbnail: null, thumbnailMaxRes: null, fullSize: null, thumbnailSrcSet: null, thumbnailSizes: null };
-  
-  let relativePath = originalSrc.startsWith('/') ? originalSrc.substring(1) : originalSrc;
-  relativePath = relativePath.replace(/^public\//, '');
-  const fileName = relativePath.split('/').pop() || relativePath;
-  const ext = fileName.match(/\.[^/.]+$/)?.[0]?.toLowerCase() || '';
-  const isPng = ext === '.png';
-  const safeBaseName = fileName.replace(/[^a-zA-Z0-9]/g, '_').replace(/\.[^/.]+$/, '');
-  
-  const baseThumb = `/images/thumbnails/${safeBaseName}`;
-  const thumbnail = `${baseThumb}-400${THUMB_EXT}`;
-  const thumbnailMaxRes = `${baseThumb}-${Math.max(...THUMB_WIDTHS)}${THUMB_EXT}`;
-  const fullPath = `/images/full/${safeBaseName}${isPng ? '.png' : '.jpg'}`;
-  const thumbnailSrcSet = THUMB_WIDTHS.map((w) => `${baseThumb}-${w}${THUMB_EXT} ${w}w`).join(', ');
-  const thumbnailSizes = '(max-width: 432px) 55vw, 200px';
-  return { thumbnail, thumbnailMaxRes, fullSize: fullPath, thumbnailSrcSet, thumbnailSizes };
-}
+export { getOptimizedImagePaths, resolveImagePaths, getThumbnailSrc, getFullSizeSrc } from "./utils/galleryImageUtils";
+export { useEffectiveGalleryImages, useGalleryCategoryImages } from "./hooks/useGalleryCategoryImages";
+export { GALLERY_ORDER_STORAGE_KEY as STORAGE_KEY } from "./hooks/useGalleryCategoryImages";
 
 const MASONRY_ROW_HEIGHT_PX = 8;
+const MASONRY_COLUMN_COUNT = 3;
+const MASONRY_CONTAINER_MAX_PX = 1200;
+const DEFAULT_ASPECT_RATIO = 4 / 3;
+
+/** Estimate grid row span from column width + aspect ratio (avoids initial span 400 jump). */
+function estimateRowSpan(aspectRatio = DEFAULT_ASPECT_RATIO) {
+  if (typeof window === "undefined") return 20;
+  const viewportPadding = Math.min(window.innerWidth * 0.1, 64) * 2;
+  const containerW = Math.min(MASONRY_CONTAINER_MAX_PX, Math.max(320, window.innerWidth - viewportPadding));
+  const gapPx = parseFloat(
+    getComputedStyle(document.documentElement).fontSize || "16"
+  );
+  const gridGap = Math.max(12, Math.min(24, gapPx * 1.25));
+  const colW = (containerW - gridGap * (MASONRY_COLUMN_COUNT - 1)) / MASONRY_COLUMN_COUNT;
+  const h = colW / aspectRatio;
+  const unit = MASONRY_ROW_HEIGHT_PX + gridGap;
+  return Math.max(1, Math.ceil((h + gridGap) / unit));
+}
+
+function GalleryCategoryTitle({ categoryId }) {
+  const titles = GALLERY_CATEGORY_TITLES[categoryId];
+  if (!titles) return null;
+  const same =
+    titles.vi.trim().toLowerCase() === titles.en.trim().toLowerCase();
+
+  return (
+    <div className="gallery__title-block">
+      {!same && <p className="gallery__title-eyebrow">{titles.vi}</p>}
+      <h1 className="gallery__title">{same ? titles.vi : titles.en}</h1>
+    </div>
+  );
+}
+
+function GallerySubNav({
+  category,
+  onCategoryChange,
+  totalCount,
+  likeCount,
+  showLikedOnly,
+  onToggleLikedFilter,
+  onShowAllPhotos,
+  tabs,
+}) {
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
+  const tabsScrollRef = useRef(null);
+  const tabRefs = useRef({});
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollHints = useCallback(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(maxScroll > 2 && el.scrollLeft < maxScroll - 2);
+  }, []);
+
+  const scrollActiveTabIntoView = useCallback(() => {
+    const container = tabsScrollRef.current;
+    const tabEl = tabRefs.current[category];
+    if (!container || !tabEl) return;
+    container.scrollTo({
+      left: Math.max(0, tabEl.offsetLeft - 4),
+      behavior: "smooth",
+    });
+  }, [category]);
+
+  const scrollTabsBy = useCallback((direction) => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    el.scrollBy({
+      left: direction * Math.max(120, el.clientWidth * 0.55),
+      behavior: "smooth",
+    });
+  }, []);
+
+  useEffect(() => {
+    scrollActiveTabIntoView();
+    const tId = window.setTimeout(updateScrollHints, 320);
+    return () => window.clearTimeout(tId);
+  }, [category, tabs, scrollActiveTabIntoView, updateScrollHints]);
+
+  useEffect(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    updateScrollHints();
+    const ro = new ResizeObserver(updateScrollHints);
+    ro.observe(el);
+    window.addEventListener("resize", updateScrollHints);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", updateScrollHints);
+    };
+  }, [updateScrollHints, tabs]);
+
+  return (
+    <div className="gallery__subnav">
+      <div className="gallery__subnav-stats">
+        {showLikedOnly ? (
+          <button
+            type="button"
+            className="gallery__stat-pill gallery__stat-pill--all gallery__stat-pill--all-active"
+            onClick={onShowAllPhotos}
+            aria-pressed={false}
+            title={t.galleryShowAll}
+          >
+            <ImageIcon size={16} strokeWidth={1.75} aria-hidden />
+            <span>{totalCount}</span>
+          </button>
+        ) : (
+          <span className="gallery__stat-pill">
+            <ImageIcon size={16} strokeWidth={1.75} aria-hidden />
+            <span>{totalCount}</span>
+          </span>
+        )}
+        <button
+          type="button"
+          className={`gallery__stat-pill gallery__stat-pill--like ${showLikedOnly ? "gallery__stat-pill--filter-active" : ""}`}
+          onClick={onToggleLikedFilter}
+          aria-pressed={showLikedOnly}
+          title={showLikedOnly ? "Show all photos" : "Show liked photos only"}
+        >
+          <Heart size={16} strokeWidth={1.75} fill={showLikedOnly ? "currentColor" : "none"} aria-hidden />
+          <span>{likeCount}</span>
+        </button>
+      </div>
+      <div className="gallery__subnav-tabs-wrap">
+        {canScrollLeft && (
+          <>
+            <div className="gallery__subnav-tabs-fade gallery__subnav-tabs-fade--left" aria-hidden />
+            <button
+              type="button"
+              className="gallery__subnav-tabs-arrow gallery__subnav-tabs-arrow--left"
+              onClick={() => scrollTabsBy(-1)}
+              aria-label="Scroll albums left"
+            >
+              <ChevronLeft size={18} strokeWidth={2} aria-hidden />
+            </button>
+          </>
+        )}
+        <div
+          ref={tabsScrollRef}
+          className="gallery__subnav-tabs"
+          role="tablist"
+          aria-label={t.galleryEyebrow}
+          onScroll={updateScrollHints}
+        >
+          {tabs.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={category === id}
+              ref={(el) => {
+                tabRefs.current[id] = el;
+              }}
+              className={`gallery__subnav-tab ${category === id ? "gallery__subnav-tab--active" : ""}`}
+              onClick={() => onCategoryChange(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {canScrollRight && (
+          <>
+            <div className="gallery__subnav-tabs-fade gallery__subnav-tabs-fade--right" aria-hidden />
+            <button
+              type="button"
+              className="gallery__subnav-tabs-arrow gallery__subnav-tabs-arrow--right"
+              onClick={() => scrollTabsBy(1)}
+              aria-label="Scroll albums right"
+            >
+              <ChevronRight size={18} strokeWidth={2} aria-hidden />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function GalleryItem({
   image,
   index,
+  imageKey,
+  liked,
+  onToggleLike,
   thumbnailSrc,
   fullSizeSrc,
   thumbnailSrcSet,
   thumbnailSizes,
   shouldPreload,
-  imageLoadingStates,
-  setImageLoadingStates,
-  imageRefs,
-  processedImagesRef,
+  isLoaded,
+  onImageLoaded,
   onOpen,
   itemRef,
 }) {
   const contentRef = useRef(null);
-  const [rowSpan, setRowSpan] = useState(400);
+  const [rowSpan, setRowSpan] = useState(() => estimateRowSpan());
   const rafRef = useRef(null);
+  const thumbFallbacksRef = useRef([]);
+  const driveEmbedProps = getDriveImageEmbedProps(image);
+
+  useEffect(() => {
+    if (isDriveImage(image)) {
+      thumbFallbacksRef.current = getDriveThumbnailFallbacks(
+        image.driveFileId || image.src,
+        getGridThumbWidth(window.innerWidth)
+      );
+    }
+  }, [image]);
 
   const recalcSpan = useCallback(() => {
     const wrapper = contentRef.current;
     if (!wrapper) return;
     const grid = wrapper.closest(".gallery__masonry");
-    const rowGapPx = grid
-      ? parseFloat(getComputedStyle(grid).rowGap) || 0
-      : 0;
+    const rowGapPx = grid ? parseFloat(getComputedStyle(grid).rowGap) || 0 : 0;
     const h = wrapper.getBoundingClientRect().height;
     if (h <= 0) return;
-    const rowHeight = MASONRY_ROW_HEIGHT_PX;
-    const unit = rowHeight + rowGapPx;
-    const span = Math.max(
-      1,
-      Math.ceil((h + rowGapPx) / unit)
-    );
-    setRowSpan(span);
+    const unit = MASONRY_ROW_HEIGHT_PX + rowGapPx;
+    setRowSpan(Math.max(1, Math.ceil((h + rowGapPx) / unit)));
   }, []);
 
   useEffect(() => {
@@ -162,9 +265,15 @@ function GalleryItem({
     const ro = new ResizeObserver(scheduleRecalc);
     ro.observe(el);
     scheduleRecalc();
+    const onResize = () => {
+      if (!el.style.aspectRatio) setRowSpan(estimateRowSpan());
+      scheduleRecalc();
+    };
+    window.addEventListener("resize", onResize);
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       ro.disconnect();
+      window.removeEventListener("resize", onResize);
     };
   }, [recalcSpan]);
 
@@ -176,34 +285,44 @@ function GalleryItem({
         wrapper.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
         requestAnimationFrame(() => recalcSpan());
       }
-      setImageLoadingStates((prev) => ({ ...prev, [index]: true }));
+      onImageLoaded(imageKey);
     },
-    [index, setImageLoadingStates, recalcSpan]
+    [imageKey, onImageLoaded, recalcSpan]
   );
 
   const setImgRef = useCallback(
     (el) => {
-      if (el) {
-        imageRefs.current[index] = el;
-        if (
-          el.complete &&
-          el.naturalHeight !== 0 &&
-          el.naturalWidth > 0 &&
-          !processedImagesRef.current.has(index)
-        ) {
-          processedImagesRef.current.add(index);
-          setImageLoadingStates((prev) => ({ ...prev, [index]: true }));
-          queueMicrotask(() => {
-            const w = contentRef.current;
-            if (w) {
-              w.style.aspectRatio = `${el.naturalWidth} / ${el.naturalHeight}`;
-              requestAnimationFrame(() => recalcSpan());
-            }
-          });
-        }
+      if (
+        el &&
+        el.complete &&
+        el.naturalHeight !== 0 &&
+        el.naturalWidth > 0 &&
+        !isLoaded
+      ) {
+        onImageLoaded(imageKey);
+        queueMicrotask(() => {
+          const w = contentRef.current;
+          if (w) {
+            w.style.aspectRatio = `${el.naturalWidth} / ${el.naturalHeight}`;
+            requestAnimationFrame(() => recalcSpan());
+          }
+        });
       }
     },
-    [index, imageRefs, processedImagesRef, setImageLoadingStates, recalcSpan]
+    [imageKey, isLoaded, onImageLoaded, recalcSpan]
+  );
+
+  const handleImageError = useCallback(
+    (e) => {
+      const img = e.target;
+      const next = thumbFallbacksRef.current.shift();
+      if (next && img.src !== next) {
+        img.src = next;
+        return;
+      }
+      onImageLoaded(imageKey);
+    },
+    [imageKey, onImageLoaded]
   );
 
   return (
@@ -211,12 +330,11 @@ function GalleryItem({
       ref={itemRef}
       className="gallery__item"
       style={{ gridRowEnd: `span ${rowSpan}` }}
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 8 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.05 }}
+      viewport={{ once: true, amount: 0.02, margin: "80px 0px" }}
       transition={{
-        duration: 0.28,
-        delay: index * 0.012,
+        duration: 0.22,
         ease: [0.25, 0.1, 0.25, 1],
       }}
     >
@@ -224,6 +342,7 @@ function GalleryItem({
         ref={contentRef}
         className="gallery__image-wrapper"
         onClick={(e) => {
+          if (e.target.closest(".gallery__like-btn")) return;
           const r = e.currentTarget.getBoundingClientRect();
           onOpen(index, {
             rect: { left: r.left, top: r.top, width: r.width, height: r.height },
@@ -231,7 +350,7 @@ function GalleryItem({
           });
         }}
       >
-        {!imageLoadingStates[index] && (
+        {!isLoaded && (
           <div className="gallery__image-loading" aria-hidden="true">
             <span className="gallery__image-spinner" />
           </div>
@@ -241,69 +360,103 @@ function GalleryItem({
           srcSet={thumbnailSrcSet || undefined}
           sizes={thumbnailSizes || undefined}
           data-full={shouldPreload ? fullSizeSrc : undefined}
-          data-index={index}
-          alt={image.alt || `Gallery image ${index + 1}`}
-          className={`gallery__image ${imageLoadingStates[index] ? "gallery__image--loaded" : "gallery__image--loading"}`}
+          data-image-key={imageKey}
+          alt={getGalleryImageAlt(image, index)}
+          className={`gallery__image ${isLoaded ? "gallery__image--loaded" : "gallery__image--loading"}`}
           loading="lazy"
           decoding="async"
+          {...driveEmbedProps}
           onLoad={handleImageLoad}
-          onError={() => setImageLoadingStates((prev) => ({ ...prev, [index]: true }))}
+          onError={handleImageError}
           ref={setImgRef}
         />
+        <button
+          type="button"
+          className={`gallery__like-btn ${liked ? "gallery__like-btn--active" : ""}`}
+          aria-label={liked ? "Unlike" : "Like"}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleLike(imageKey);
+          }}
+        >
+          <Heart size={14} fill={liked ? "currentColor" : "none"} strokeWidth={1.75} />
+        </button>
       </div>
     </motion.div>
   );
 }
 
-export default function Gallery({ onOpen, images: imagesProp, scrollToIndex, onScrollToComplete }) {
-  const list = imagesProp ?? GALLERY_IMAGES;
+export default function Gallery({
+  onOpen,
+  images: imagesProp,
+  scrollToIndex,
+  onScrollToComplete,
+  category: controlledCategory,
+  onCategoryChange,
+  initialCategory = "pre-wedding",
+}) {
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
+  const [internalCategory, setInternalCategory] = useState(initialCategory);
+  const category = controlledCategory ?? internalCategory;
+  const setCategory = onCategoryChange ?? setInternalCategory;
+  const categoryImages = useGalleryCategoryImages(category);
+  const list = imagesProp ?? categoryImages;
+
+  const [likesVersion, setLikesVersion] = useState(0);
+  const [showLikedOnly, setShowLikedOnly] = useState(false);
   const [loadedImages, setLoadedImages] = useState(new Set());
-  const [imageLoadingStates, setImageLoadingStates] = useState({}); // Track loading state per image
+  const [loadedThumbs, setLoadedThumbs] = useState({});
   const galleryRef = useRef(null);
-  const imageRefs = useRef({});
   const itemRefs = useRef({});
-  const processedImagesRef = useRef(new Set()); // Track which images we've already processed
+
+  const tabs = useMemo(
+    () =>
+      GALLERY_CATEGORY_IDS.map((id) => ({
+        id,
+        label: t.galleryCategoryLabels?.[id] || id,
+      })),
+    [t.galleryCategoryLabels]
+  );
+
+  const imageKeys = useMemo(
+    () => list.map((img) => getImageKey(img, category)),
+    [list, category]
+  );
+
+  const displayItems = useMemo(() => {
+    void likesVersion;
+    const items = list.map((image, originalIndex) => ({
+      image,
+      originalIndex,
+      imageKey: imageKeys[originalIndex],
+    }));
+    if (!showLikedOnly) return items;
+    return items.filter(({ imageKey }) => isImageLiked(imageKey));
+  }, [list, imageKeys, showLikedOnly, likesVersion]);
+
+  const likeCount = useMemo(() => {
+    void likesVersion;
+    return countGalleryLikes(imageKeys);
+  }, [imageKeys, likesVersion]);
+
+  const markThumbLoaded = useCallback((imageKey) => {
+    setLoadedThumbs((prev) => (prev[imageKey] ? prev : { ...prev, [imageKey]: true }));
+  }, []);
 
   useEffect(() => {
-    if (scrollToIndex == null || scrollToIndex < 0 || scrollToIndex >= list.length) return;
+    const onLikes = () => setLikesVersion((v) => v + 1);
+    window.addEventListener("gallery_likes_updated", onLikes);
+    return () => window.removeEventListener("gallery_likes_updated", onLikes);
+  }, []);
+
+  useEffect(() => {
+    if (scrollToIndex == null || scrollToIndex < 0) return;
     const el = itemRefs.current[scrollToIndex];
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
     onScrollToComplete?.();
-  }, [scrollToIndex, list.length, onScrollToComplete]);
+  }, [scrollToIndex, onScrollToComplete]);
 
-  // Helper functions: tự động map src sang thumbnails và fullSize
-  const getImageSrc = (image) => {
-    // Nếu có thumbnail được định nghĩa sẵn (manual override), dùng nó
-    if (image.thumbnail) return image.thumbnail;
-    
-    // Tự động generate thumbnail path từ src
-    if (image.src) {
-      const paths = getOptimizedImagePaths(image.src);
-      return paths.thumbnail || image.src; // Fallback về original nếu không tìm thấy thumbnail
-    }
-    
-    return image.src;
-  };
-
-  const getFullSizeSrc = (image) => {
-    // Nếu có fullSize được định nghĩa sẵn (manual override), dùng nó
-    if (image.fullSize) return image.fullSize;
-    
-    // Tự động generate fullSize path từ src (compressed full-size từ script)
-    if (image.src) {
-      const paths = getOptimizedImagePaths(image.src);
-      return paths.fullSize || image.src; // Fallback về original nếu không tìm thấy
-    }
-    
-    return image.src;
-  };
-
-  // Intersection Observer cho preloading full-size images (chỉ preload, không update src)
-  // Gallery view giữ nguyên thumbnails, full-size chỉ dùng trong lightbox
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -311,84 +464,103 @@ export default function Gallery({ onOpen, images: imagesProp, scrollToIndex, onS
           if (entry.isIntersecting) {
             const img = entry.target;
             const fullSrc = img.dataset.full;
-            
-            // Chỉ preload full-size để sẵn sàng cho lightbox, không thay đổi src trong gallery
             if (fullSrc && !loadedImages.has(fullSrc)) {
               const fullImage = new Image();
-              fullImage.onload = () => {
-                // Chỉ track rằng full-size đã được preload, không update src
-                setLoadedImages(prev => new Set(prev).add(fullSrc));
-              };
-              fullImage.onerror = () => {
-                // Track cả khi error để tránh retry
-                setLoadedImages(prev => new Set(prev).add(fullSrc));
-              };
+              fullImage.onload = () => setLoadedImages((prev) => new Set(prev).add(fullSrc));
+              fullImage.onerror = () => setLoadedImages((prev) => new Set(prev).add(fullSrc));
               fullImage.src = fullSrc;
             }
-            
             observer.unobserve(img);
           }
         });
       },
-      {
-        rootMargin: "100px", // Start loading 100px before entering viewport
-        threshold: 0.01
-      }
+      { rootMargin: "100px", threshold: 0.01 }
     );
+    const imageElements = document.querySelectorAll(".gallery__image[data-full]");
+    imageElements.forEach((img) => observer.observe(img));
+    return () => imageElements.forEach((img) => observer.unobserve(img));
+  }, [loadedImages, displayItems, category]);
 
-    // Observe all images
-    const imageElements = document.querySelectorAll('.gallery__image[data-full]');
-    imageElements.forEach(img => observer.observe(img));
+  const handleCategoryChange = (id) => {
+    setCategory(id);
+    setShowLikedOnly(false);
+    setLoadedThumbs({});
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
-    return () => {
-      imageElements.forEach(img => observer.unobserve(img));
-    };
-  }, [loadedImages]);
+  const handleToggleLikedFilter = () => {
+    setShowLikedOnly((v) => !v);
+  };
+
+  const handleToggleLike = (imageKey) => {
+    toggleGalleryLike(imageKey);
+    setLikesVersion((v) => v + 1);
+  };
 
   return (
     <section className="gallery">
+      <p className="gallery__eyebrow gallery__eyebrow--top">{t.galleryEyebrow}</p>
+
+      <GallerySubNav
+        category={category}
+        onCategoryChange={handleCategoryChange}
+        totalCount={list.length}
+        likeCount={likeCount}
+        showLikedOnly={showLikedOnly}
+        onToggleLikedFilter={handleToggleLikedFilter}
+        onShowAllPhotos={() => setShowLikedOnly(false)}
+        tabs={tabs}
+      />
+
       <motion.header
         className="gallery__header"
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
+        transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
       >
-        <p className="gallery__eyebrow">{t.galleryEyebrow}</p>
-        <h1 className="gallery__title">{t.galleryTitle}</h1>
+        <GalleryCategoryTitle categoryId={category} />
       </motion.header>
 
-      <div className="gallery__container" ref={galleryRef}>
-        <div className="gallery__masonry">
-          {list.map((image, index) => {
-            const thumbnailSrc = getImageSrc(image);
-            const fullSizeSrc = getFullSizeSrc(image);
-            const paths = image.src ? getOptimizedImagePaths(image.src) : null;
-            const thumbnailSrcSet = paths?.thumbnailSrcSet ?? null;
-            const thumbnailSizes = paths?.thumbnailSizes ?? null;
-            const shouldPreload = thumbnailSrc !== fullSizeSrc && thumbnailSrc && fullSizeSrc;
+      {list.length === 0 ? (
+        <p className="gallery__empty">{t.galleryEmpty}</p>
+      ) : displayItems.length === 0 ? (
+        <p className="gallery__empty">{t.galleryEmptyLiked}</p>
+      ) : (
+        <div className="gallery__container" ref={galleryRef}>
+          <div className="gallery__masonry">
+            {displayItems.map(({ image, originalIndex, imageKey }, displayIndex) => {
+              const paths = resolveImagePaths(image);
+              const thumbnailSrc = paths.thumbnail || getThumbnailSrc(image);
+              const fullSizeSrc = paths.fullSize || getFullSizeSrc(image);
+              const liked = isImageLiked(imageKey);
+              void likesVersion;
+              const shouldPreload = thumbnailSrc !== fullSizeSrc && thumbnailSrc && fullSizeSrc;
 
-            return (
-              <GalleryItem
-                key={image.fullSize || image.thumbnail || image.src}
-                image={image}
-                index={index}
-                thumbnailSrc={thumbnailSrc}
-                fullSizeSrc={fullSizeSrc}
-                thumbnailSrcSet={thumbnailSrcSet}
-                thumbnailSizes={thumbnailSizes}
-                shouldPreload={shouldPreload}
-                imageLoadingStates={imageLoadingStates}
-                setImageLoadingStates={setImageLoadingStates}
-                imageRefs={imageRefs}
-                processedImagesRef={processedImagesRef}
-                onOpen={onOpen}
-                itemRef={(el) => { itemRefs.current[index] = el; }}
-              />
-            );
-          })}
+              return (
+                <GalleryItem
+                  key={imageKey}
+                  image={image}
+                  index={displayIndex}
+                  imageKey={imageKey}
+                  liked={liked}
+                  onToggleLike={handleToggleLike}
+                  thumbnailSrc={thumbnailSrc}
+                  fullSizeSrc={fullSizeSrc}
+                  thumbnailSrcSet={paths.thumbnailSrcSet}
+                  thumbnailSizes={paths.thumbnailSizes}
+                  shouldPreload={shouldPreload}
+                  isLoaded={Boolean(loadedThumbs[imageKey])}
+                  onImageLoaded={markThumbLoaded}
+                  onOpen={(displayIdx, meta) => onOpen(originalIndex, meta)}
+                  itemRef={(el) => {
+                    itemRefs.current[originalIndex] = el;
+                  }}
+                />
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
-

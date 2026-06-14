@@ -6,108 +6,22 @@ import { translations } from "./translations";
 export default function TopNav({ tab, onTabChange }) {
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [canShow, setCanShow] = useState(false); // delay initial reveal
+  const [canShow, setCanShow] = useState(false);
   const navRef = useRef(null);
-  
+
   const TABS = [
     { key: "home", label: t.home },
     { key: "gallery", label: t.gallery },
-    { key: "rsvp", label: t.rsvp },
   ];
 
   useEffect(() => {
-    // Delay showing the navbar to allow HeroShowcase animations (~2s) to play
-    const t = setTimeout(() => setCanShow(true), 2000);
-
-    const handleScroll = () => {
-      const threshold = navRef.current?.offsetHeight ?? 0;
-      setIsScrolled(window.scrollY > threshold);
-    };
-
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener("scroll", handleScroll);
-    };
+    const timer = setTimeout(() => setCanShow(true), 2000);
+    return () => clearTimeout(timer);
   }, []);
 
-  const scrollToSchedule = (duration = 800) => {
-    const scheduleSection = document.getElementById("schedule");
-    if (!scheduleSection) return;
-
-    const startPosition = window.pageYOffset;
-    const targetPosition = scheduleSection.offsetTop; // Scroll đến đúng start của section
-    const distance = targetPosition - startPosition;
-    let startTime = null;
-
-    const easeInOutCubic = (t) => {
-      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    };
-
-    const animation = (currentTime) => {
-      if (startTime === null) startTime = currentTime;
-      const timeElapsed = currentTime - startTime;
-      const progress = Math.min(timeElapsed / duration, 1);
-      const ease = easeInOutCubic(progress);
-
-      window.scrollTo(0, startPosition + distance * ease);
-
-      if (timeElapsed < duration) {
-        requestAnimationFrame(animation);
-      }
-    };
-
-    requestAnimationFrame(animation);
-  };
-
-  const handleTimelineClick = () => {
-    // Nếu đang ở tab Gallery, chuyển về Home trước
-    if (tab !== "home") {
-      onTabChange("home");
-      // Đợi component render xong rồi mới scroll
-      setTimeout(() => {
-        scrollToSchedule(1500); // 800ms duration
-      }, 100);
-    } else {
-      // Nếu đã ở Home, scroll ngay
-      scrollToSchedule(1500); // 800ms duration
-    }
-  };
-
-  const scrollToTop = (duration = 800) => {
-    const startPosition = window.pageYOffset;
-    const targetPosition = 0;
-    const distance = targetPosition - startPosition;
-    let startTime = null;
-
-    const easeInOutCubic = (t) => {
-      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    };
-
-    const animation = (currentTime) => {
-      if (startTime === null) startTime = currentTime;
-      const timeElapsed = currentTime - startTime;
-      const progress = Math.min(timeElapsed / duration, 1);
-      const ease = easeInOutCubic(progress);
-
-      window.scrollTo(0, startPosition + distance * ease);
-
-      if (timeElapsed < duration) {
-        requestAnimationFrame(animation);
-      }
-    };
-
-    requestAnimationFrame(animation);
-  };
-
   const handleHomeClick = () => {
-    // Scroll to top immediately before tab change
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    window.scrollTo({ top: 0, behavior: "instant" });
     if (tab !== "home") {
-      // Small delay to ensure scroll completes before tab change
       setTimeout(() => {
         onTabChange("home");
       }, 0);
@@ -117,35 +31,31 @@ export default function TopNav({ tab, onTabChange }) {
   return (
     <motion.div
       ref={navRef}
-      initial={{ y: -100, opacity: 0 }}
+      initial={{ y: -24, opacity: 0 }}
       animate={{
-        y: canShow ? 0 : -100,
+        y: canShow ? 0 : -24,
         opacity: canShow ? 1 : 0,
       }}
       transition={{
         type: "spring",
         stiffness: 300,
         damping: 30,
-        mass: 0.8
+        mass: 0.8,
       }}
-      className={`fixed top-0 left-0 right-0 z-40 ${
-        isScrolled ? "bg-[#f6f7ef]/92 shadow-sm" : "bg-transparent"
-      }`}
+      className="relative z-20 w-full bg-[#f6f7ef]/95 backdrop-blur-sm"
     >
-      <nav className="mx-auto flex w-full justify-center">
-        <div className="relative flex items-center gap-8 rounded-full px-6 py-3 transition-colors">
+      <nav className="mx-auto flex w-full justify-center py-3">
+        <div className="relative flex items-center gap-8 rounded-full px-6">
           {TABS.map(({ key, label }) => (
             <TabButton
               key={key}
               label={label}
               active={tab === key}
               onClick={() => {
-                // Scroll to top immediately before tab change
-                window.scrollTo({ top: 0, behavior: 'instant' });
+                window.scrollTo({ top: 0, behavior: "instant" });
                 if (key === "home") {
                   handleHomeClick();
                 } else {
-                  // Small delay to ensure scroll position is reset before tab change
                   setTimeout(() => {
                     onTabChange(key);
                   }, 10);
@@ -153,11 +63,6 @@ export default function TopNav({ tab, onTabChange }) {
               }}
             />
           ))}
-          <TabButton
-            label={t.timeline}
-            active={false}
-            onClick={handleTimelineClick}
-          />
         </div>
       </nav>
     </motion.div>
@@ -184,8 +89,8 @@ function TabButton({ label, active, onClick }) {
               type: "spring",
               stiffness: 500,
               damping: 30,
-              duration: 0.3
-            }
+              duration: 0.3,
+            },
           }}
         />
       )}

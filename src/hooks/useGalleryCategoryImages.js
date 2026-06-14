@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { GALLERY_CATEGORIES, driveItemsToImages } from "../galleryCategories";
+import { GALLERY_CATEGORIES, GUEST_MOMENTS_CATEGORY_ID, driveItemsToImages } from "../galleryCategories";
 import { GALLERY_IMAGES as ALL_IMAGES } from "../galleryImages.generated";
 import { GALLERY_ORDER } from "../galleryConfig";
 
@@ -49,14 +49,20 @@ function getPreWeddingImages(storedOrder) {
   return buildLocalList(effectiveOrder, { mergeNewFromGenerated: mergeNew });
 }
 
-function getCategoryImages(categoryId, storedOrder) {
+function getCategoryImages(categoryId, storedOrder, subAlbumId = null) {
+  if (categoryId === GUEST_MOMENTS_CATEGORY_ID) return [];
   const cat = GALLERY_CATEGORIES[categoryId];
   if (!cat) return [];
   if (cat.type === "local") return getPreWeddingImages(storedOrder);
+  if (cat.type === "drive-subalbums") {
+    const sub = subAlbumId || cat.defaultSubAlbum;
+    const subCat = cat.subAlbums?.[sub];
+    return driveItemsToImages(subCat?.driveItems || []);
+  }
   return driveItemsToImages(cat.driveItems || []);
 }
 
-export function useGalleryCategoryImages(categoryId) {
+export function useGalleryCategoryImages(categoryId, subAlbumId = null) {
   const [storedOrder, setStoredOrder] = useState(() => getStoredOrder());
 
   useEffect(() => {
@@ -70,8 +76,8 @@ export function useGalleryCategoryImages(categoryId) {
   }, []);
 
   return useMemo(
-    () => getCategoryImages(categoryId, storedOrder),
-    [categoryId, storedOrder?.join(",")]
+    () => getCategoryImages(categoryId, storedOrder, subAlbumId),
+    [categoryId, subAlbumId, storedOrder?.join(",")]
   );
 }
 

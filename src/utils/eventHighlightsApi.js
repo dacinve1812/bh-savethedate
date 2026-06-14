@@ -5,6 +5,8 @@
  */
 
 const LS_KEY = "event_highlights_local_v1";
+const LIST_CACHE_KEY = "event_highlights_list_v2";
+const LIST_CACHE_TTL_MS = 5 * 60 * 1000;
 const NOTE_MAX = 90;
 const API_URL = (import.meta.env.VITE_EVENT_HIGHLIGHTS_URL || "").trim();
 
@@ -54,6 +56,38 @@ function normalizeHighlights(items) {
   return [...byId.values()].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 }
 
+function readListCache() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(LIST_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.items)) return null;
+    if (Date.now() - Number(parsed.ts || 0) > LIST_CACHE_TTL_MS) return null;
+    return normalizeHighlights(parsed.items);
+  } catch {
+    return null;
+  }
+}
+
+function writeListCache(items) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(
+      LIST_CACHE_KEY,
+      JSON.stringify({ ts: Date.now(), items })
+    );
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+/** Stale list for instant grid paint (session cache, ~5 min). */
+export function peekHighlightsCache() {
+  if (API_URL) return readListCache();
+  return normalizeHighlights(readLocal());
+}
+
 /**
  * @returns {Promise<HighlightItem[]>}
  */
@@ -64,7 +98,9 @@ export async function fetchHighlights() {
     const json = await res.json().catch(() => ({}));
     if (!json.success) throw new Error(json.message || "Failed to load highlights");
     const items = Array.isArray(json.items) ? json.items : [];
-    return normalizeHighlights(items);
+    const normalized = normalizeHighlights(items);
+    writeListCache(normalized);
+    return normalized;
   }
   return normalizeHighlights(readLocal());
 }
@@ -226,6 +262,103 @@ export function driveImageUrl(fileId) {
 
 export function driveVideoPreviewUrl(fileId) {
   return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`;
+}
+
+/** Direct stream URL for native <video> (public Drive files). */
+export function driveVideoStreamUrl(fileId) {
+  return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
+}
+
+/** Alternate stream when primary is blocked. */
+export function driveVideoStreamFallbackUrl(fileId) {
+  return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`;
+}
+
+/** Third stream candidate (docs host). */
+export function driveVideoStreamAltUrl(fileId) {
+  return `https://docs.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
+}
+
+/** Stream via Apps Script — resolves public Drive URLs (JSON, not binary). */
+export function highlightVideoStreamResolveUrl(fileId) {
+  if (!API_URL || !fileId) return "";
+  const sep = API_URL.includes("?") ? "&" : "?";
+  return `${API_URL}${sep}action=stream&fileId=${encodeURIComponent(fileId)}`;
+}
+
+/** Ordered native <video> src candidates (Drive direct links). */
+export function getHighlightVideoStreamCandidates(fileId, { preferViewFirst = false } = {}) {
+  const id = encodeURIComponent(fileId);
+  const downloadFirst = [
+    driveVideoStreamUrl(fileId),
+    driveVideoStreamFallbackUrl(fileId),
+    driveVideoStreamAltUrl(fileId),
+    `https://drive.google.com/uc?export=download&confirm=t&id=${id}`,
+  ];
+  const viewFirst = [
+    driveVideoStreamFallbackUrl(fileId),
+    driveVideoStreamUrl(fileId),
+    driveVideoStreamAltUrl(fileId),
+    `https://drive.google.com/uc?export=download&confirm=t&id=${id}`,
+  ];
+  return preferViewFirst ? viewFirst : downloadFirst;
+}
+
+/** Fetch stream URLs from API (verifies file exists) then merge with Drive fallbacks. */
+export async function resolveHighlightVideoSources(fileId, { preferViewFirst = false } = {}) {
+  const fallbacks = getHighlightVideoStreamCandidates(fileId, { preferViewFirst });
+  const resolveUrl = highlightVideoStreamResolveUrl(fileId);
+  if (!resolveUrl) return fallbacks;
+
+  try {
+    const res = await fetch(resolveUrl, { method: "GET" });
+    const json = await res.json().catch(() => ({}));
+    if (!json.success) return fallbacks;
+    const fromApi = uniqueStrings([
+      json.url,
+      json.viewUrl,
+      preferViewFirst ? json.viewUrl : json.url,
+    ]);
+    return uniqueStrings([...fromApi, ...fallbacks]);
+  } catch {
+    return fallbacks;
+  }
+}
+
+function uniqueStrings(list) {
+  const out = [];
+  const seen = new Set();
+  for (const raw of list) {
+    const s = String(raw || "").trim();
+    if (!s || seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+  }
+  return out;
+}
+
+/** @deprecated Use highlightVideoStreamResolveUrl */
+export function highlightVideoStreamUrl(fileId) {
+  return highlightVideoStreamResolveUrl(fileId);
+}
+
+/** Whether this browser can play the uploaded mime in a native <video> tag. */
+export function canPlayHighlightVideoNative(mimeType) {
+  const mime = String(mimeType || "").toLowerCase();
+  if (!mime.startsWith("video/")) return true;
+  if (typeof document === "undefined") return true;
+  const probe = document.createElement("video");
+  if (mime.includes("webm")) {
+    return (
+      probe.canPlayType('video/webm; codecs="vp9"') !== "" ||
+      probe.canPlayType('video/webm; codecs="vp8"') !== "" ||
+      probe.canPlayType("video/webm") !== ""
+    );
+  }
+  if (mime.includes("quicktime") || mime.includes("3gpp")) {
+    return probe.canPlayType("video/mp4") !== "" || probe.canPlayType("video/quicktime") !== "";
+  }
+  return probe.canPlayType(mime.split(";")[0]) !== "" || probe.canPlayType("video/mp4") !== "";
 }
 
 /** Poster / gallery thumb for a video highlight. */

@@ -1,35 +1,340 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { driveVideoPreviewUrl, highlightVideoPosterUrl } from "../utils/eventHighlightsApi";
-import { shouldDeferVideoIframe, playbackQualityLabel } from "../utils/highlightPlayback";
+import {
+  driveVideoPreviewUrl,
+  driveImageThumbUrl,
+  highlightVideoPosterUrl,
+  resolveHighlightVideoSources,
+  canPlayHighlightVideoNative,
+} from "../utils/eventHighlightsApi";
+import { getDriveThumbnailFallbacks, getGridThumbWidth } from "../utils/galleryImageUtils";
 
-/**
- * Gallery thumb or lightbox player with poster + adaptive Drive iframe.
- * @param {{ item: import('../utils/eventHighlightsApi').HighlightItem; variant: 'thumb' | 'full' }} props
- */
-export default function HighlightVideoPlayer({ item, variant = "thumb" }) {
-  const isFull = variant === "full";
-  const isLocal = item.fileId && String(item.fileId).startsWith("local-");
-  const posterSrc = highlightVideoPosterUrl(item, isFull ? 720 : 480);
-  const durationSec = item.durationSec || 0;
-  const deferHd = useMemo(() => shouldDeferVideoIframe(durationSec), [durationSec]);
+function getVideoPosterSrc(item, width) {
+  return (
+    highlightVideoPosterUrl(item, width) ||
+    (item.fileId && !String(item.fileId).startsWith("local-")
+      ? driveImageThumbUrl(item.thumbFileId || item.fileId, width)
+      : "")
+  );
+}
 
-  const [loadHd, setLoadHd] = useState(isFull && !deferHd);
-  const [iframeReady, setIframeReady] = useState(false);
+function formatDuration(sec) {
+  const s = Math.max(0, Math.round(Number(sec) || 0));
+  if (s <= 0) return "";
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return m > 0 ? `${m}:${String(r).padStart(2, "0")}` : `0:${String(r).padStart(2, "0")}`;
+}
+
+function formatPlaybackTime(sec) {
+  const s = Math.max(0, Math.floor(Number(sec) || 0));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${String(r).padStart(2, "0")}`;
+}
+
+function useMobileViewport() {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 768px)").matches : false
+  );
 
   useEffect(() => {
-    if (!isFull) return;
-    setLoadHd(!deferHd);
-    setIframeReady(false);
-  }, [item.fileId, isFull, deferHd]);
+    const mq = window.matchMedia("(max-width: 768px)");
+    const onChange = () => setIsMobile(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  return isMobile;
+}
+
+function GuestMomentFullVideo({ sources, poster, mimeType, onAllSourcesFailed, isMobile = false }) {
+  const videoRef = React.useRef(null);
+  const errorTimerRef = React.useRef(null);
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const [ready, setReady] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [current, setCurrent] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [seeking, setSeeking] = useState(false);
+  const src = sources[sourceIndex] || "";
+  const videoType = mimeType ? String(mimeType).split(";")[0] : undefined;
+
+  useEffect(() => {
+    setSourceIndex(0);
+    setReady(false);
+    setPlaying(false);
+    setCurrent(0);
+    setDuration(0);
+    setSeeking(false);
+  }, [sources]);
+
+  useEffect(() => {
+    return () => {
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    };
+  }, []);
+
+  const clearErrorTimer = () => {
+    if (errorTimerRef.current) {
+      clearTimeout(errorTimerRef.current);
+      errorTimerRef.current = null;
+    }
+  };
+
+  const handleVideoError = () => {
+    clearErrorTimer();
+    errorTimerRef.current = setTimeout(() => {
+      const video = videoRef.current;
+      if (!video) return;
+      if (video.networkState === HTMLMediaElement.NETWORK_LOADING) return;
+      if (video.readyState >= HTMLMediaElement.HAVE_METADATA) return;
+      if (sourceIndex + 1 < sources.length) {
+        setSourceIndex((i) => i + 1);
+        return;
+      }
+      onAllSourcesFailed?.();
+    }, 1200);
+  };
+
+  const togglePlay = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  };
+
+  const seekTo = (value) => {
+    const video = videoRef.current;
+    if (!video || !Number.isFinite(value)) return;
+    video.currentTime = value;
+    setCurrent(value);
+  };
+
+  return (
+    <div className="guest-moment-video guest-moment-video--full guest-moment-video--custom-controls">
+      <video
+        key={src}
+        ref={videoRef}
+        playsInline
+        preload={isMobile ? "auto" : "metadata"}
+        className={`guest-moment-video__player ${ready ? "guest-moment-video__player--ready" : ""}`}
+        onClick={togglePlay}
+        onLoadedData={() => {
+          clearErrorTimer();
+          setReady(true);
+        }}
+        onLoadedMetadata={(e) => {
+          clearErrorTimer();
+          setDuration(e.currentTarget.duration || 0);
+          setReady(true);
+        }}
+        onCanPlay={() => clearErrorTimer()}
+        onTimeUpdate={(e) => {
+          if (!seeking) setCurrent(e.currentTarget.currentTime);
+        }}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+        onError={handleVideoError}
+      >
+        <source src={src} type={videoType} />
+      </video>
+
+      {!ready && poster && (
+        <img
+          src={poster}
+          alt=""
+          className="guest-moment-video__poster guest-moment-video__poster--full-loading"
+          referrerPolicy="no-referrer"
+        />
+      )}
+
+      {!playing && ready && (
+        <button
+          type="button"
+          className="guest-moment-video__center-play"
+          onClick={togglePlay}
+          aria-label="Play video"
+        >
+          <span className="guest-moment-video__center-play-icon" aria-hidden>
+            ▶
+          </span>
+        </button>
+      )}
+
+      <div className="guest-moment-video__bar" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          className="guest-moment-video__bar-btn"
+          onClick={togglePlay}
+          aria-label={playing ? "Pause" : "Play"}
+        >
+          <span className="guest-moment-video__bar-btn-icon" aria-hidden>
+            {playing ? "⏸" : "▶"}
+          </span>
+        </button>
+        <input
+          type="range"
+          className="guest-moment-video__seek"
+          min={0}
+          max={duration || 0}
+          step={0.05}
+          value={Math.min(current, duration || 0)}
+          onChange={(e) => {
+            setSeeking(true);
+            seekTo(Number(e.target.value));
+          }}
+          onPointerUp={() => setSeeking(false)}
+          onPointerCancel={() => setSeeking(false)}
+          aria-label="Seek"
+          aria-valuemin={0}
+          aria-valuemax={duration || 0}
+          aria-valuenow={current}
+        />
+        <span className="guest-moment-video__time">
+          {formatPlaybackTime(current)}
+          {duration > 0 ? ` / ${formatPlaybackTime(duration)}` : ""}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function GuestMomentVideoFallback({ fileId, poster, openLabel = "Xem video" }) {
+  return (
+    <div className="guest-moment-video guest-moment-video--full guest-moment-video--fallback">
+      {poster ? (
+        <img src={poster} alt="" className="guest-moment-video__poster" referrerPolicy="no-referrer" />
+      ) : (
+        <div className="guest-moment-video__poster guest-moment-video__poster--empty" aria-hidden />
+      )}
+      <a
+        href={driveVideoPreviewUrl(fileId)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="guest-moment-video__fallback-play"
+      >
+        <span className="guest-moment-video__center-play-icon" aria-hidden>
+          ▶
+        </span>
+        <span className="guest-moment-video__fallback-label">{openLabel}</span>
+      </a>
+    </div>
+  );
+}
+
+function GuestMomentVideoIframe({ fileId }) {
+  return (
+    <div className="guest-moment-video guest-moment-video--full guest-moment-video--iframe">
+      <iframe
+        title="Guest video"
+        src={driveVideoPreviewUrl(fileId)}
+        className="guest-moment-video__iframe"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+  );
+}
+
+/**
+ * Gallery thumb or lightbox player — story-style 9:16, native video in full view.
+ */
+export default function HighlightVideoPlayer({ item, variant = "thumb", onMediaLoad, priority = false }) {
+  const isFull = variant === "full";
+  const isLocal = item.fileId && String(item.fileId).startsWith("local-");
+  const thumbWidth = getGridThumbWidth();
+  const posterSrc = getVideoPosterSrc(item, isFull ? 900 : thumbWidth);
+  const durationSec = item.durationSec || 0;
+  const durationLabel = formatDuration(durationSec);
+  const isMobile = useMobileViewport();
+  const posterFallbacksRef = React.useRef(
+    !isLocal && item.fileId
+      ? getDriveThumbnailFallbacks(item.thumbFileId || item.fileId, thumbWidth)
+      : []
+  );
+
+  const nativeSupported = useMemo(
+    () => isLocal || canPlayHighlightVideoNative(item.mimeType),
+    [isLocal, item.mimeType]
+  );
+  const [resolvedSources, setResolvedSources] = useState([]);
+  const [sourcesReady, setSourcesReady] = useState(!isFull || isLocal);
+  const [playbackMode, setPlaybackMode] = useState("native");
+  const [posterUrl, setPosterUrl] = useState(posterSrc);
+  const activeSources = resolvedSources;
+
+  useEffect(() => {
+    if (!isFull || isLocal || !item.fileId) return undefined;
+    let cancelled = false;
+    setSourcesReady(false);
+    setResolvedSources([]);
+    resolveHighlightVideoSources(item.fileId, { preferViewFirst: isMobile }).then((urls) => {
+      if (cancelled) return;
+      setResolvedSources(urls);
+      setSourcesReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isFull, isLocal, item.fileId, isMobile]);
+
+  useEffect(() => {
+    setPlaybackMode(nativeSupported ? "native" : "iframe");
+    setPosterUrl(posterSrc);
+    posterFallbacksRef.current =
+      !isLocal && item.fileId
+        ? getDriveThumbnailFallbacks(item.thumbFileId || item.fileId, thumbWidth)
+        : [];
+  }, [item.fileId, item.mimeType, isFull, isLocal, thumbWidth, posterSrc, nativeSupported]);
+
+  useEffect(() => {
+    if (isFull || posterSrc) return;
+    onMediaLoad?.(9, 16);
+  }, [isFull, posterSrc, onMediaLoad, item.fileId]);
+
+  const handlePosterLoad = (e) => {
+    const img = e.currentTarget;
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+      onMediaLoad?.(img.naturalWidth, img.naturalHeight);
+    }
+  };
+
+  const handlePosterError = (e) => {
+    const img = e.currentTarget;
+    const next = posterFallbacksRef.current.shift();
+    if (next && img.src !== next) {
+      img.src = next;
+      return;
+    }
+    onMediaLoad?.(9, 16);
+  };
 
   if (isLocal && item._dataUrl) {
+    if (!isFull) {
+      return (
+        <video
+          src={item._dataUrl}
+          poster={item._thumbDataUrl || undefined}
+          playsInline
+          className="guest-moment-video guest-moment-video--thumb"
+          onLoadedMetadata={(e) => {
+            const v = e.currentTarget;
+            if (v.videoWidth > 0) onMediaLoad?.(v.videoWidth, v.videoHeight);
+          }}
+        />
+      );
+    }
     return (
-      <video
-        src={item._dataUrl}
-        poster={item._thumbDataUrl || undefined}
-        controls={isFull}
-        playsInline
-        className={isFull ? "w-full max-h-[min(72vh,680px)] object-contain" : "w-full h-auto block"}
+      <GuestMomentFullVideo
+        sources={[item._dataUrl]}
+        poster={item._thumbDataUrl}
+        mimeType={item.mimeType || "video/mp4"}
+        onAllSourcesFailed={() => {}}
+        isMobile={isMobile}
       />
     );
   }
@@ -38,80 +343,76 @@ export default function HighlightVideoPlayer({ item, variant = "thumb" }) {
 
   if (!isFull) {
     return (
-      <div className="relative w-full bg-[#1c2321]/90 min-h-[120px]">
-        {posterSrc ? (
+      <div className="guest-moment-video guest-moment-video--thumb">
+        {posterUrl ? (
           <img
-            src={posterSrc}
+            src={posterUrl}
             alt=""
-            className="w-full h-auto block object-cover"
-            loading="lazy"
+            className="guest-moment-video__poster"
+            loading={priority ? "eager" : "lazy"}
+            decoding="async"
             referrerPolicy="no-referrer"
+            onLoad={handlePosterLoad}
+            onError={(e) => {
+              const next = posterFallbacksRef.current.shift();
+              if (next && e.currentTarget.src !== next) {
+                e.currentTarget.src = next;
+                return;
+              }
+              handlePosterError(e);
+            }}
           />
         ) : (
-          <div className="w-full aspect-[9/16] max-h-64 bg-[#2a332f]" />
+          <div className="guest-moment-video__poster guest-moment-video__poster--empty" aria-hidden />
         )}
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20">
-          <span className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white text-sm">
-            ▶
-          </span>
+        <div className="guest-moment-video__play" aria-hidden>
+          <span className="guest-moment-video__play-icon">▶</span>
         </div>
+        {durationLabel && (
+          <span className="guest-moment-video__duration">{durationLabel}</span>
+        )}
       </div>
     );
   }
 
+  if (playbackMode === "fallback") {
+    return <GuestMomentVideoFallback fileId={item.fileId} poster={posterSrc} />;
+  }
+
+  if (playbackMode === "iframe") {
+    return <GuestMomentVideoIframe fileId={item.fileId} />;
+  }
+
+  if (!sourcesReady) {
+    return (
+      <div className="guest-moment-video guest-moment-video--full guest-moment-video--fallback">
+        {posterSrc ? (
+          <img src={posterSrc} alt="" className="guest-moment-video__poster" referrerPolicy="no-referrer" />
+        ) : (
+          <div className="guest-moment-video__poster guest-moment-video__poster--empty" aria-hidden />
+        )}
+      </div>
+    );
+  }
+
+  if (!activeSources.length) {
+    return <GuestMomentVideoFallback fileId={item.fileId} poster={posterSrc} />;
+  }
+
   return (
-    <div className="relative w-full max-w-3xl">
-      {posterSrc && (!loadHd || !iframeReady) && (
-        <img
-          src={posterSrc}
-          alt=""
-          className={`w-full max-h-[min(72vh,680px)] object-contain rounded-xl transition-opacity duration-300 ${
-            loadHd && iframeReady ? "opacity-0 absolute inset-0 pointer-events-none" : "opacity-100"
-          }`}
-          referrerPolicy="no-referrer"
-        />
-      )}
-
-      {loadHd && (
-        <iframe
-          title="Guest video"
-          src={driveVideoPreviewUrl(item.fileId)}
-          onLoad={() => setIframeReady(true)}
-          className={`w-full aspect-video max-h-[min(72vh,680px)] border-0 rounded-xl bg-black/40 transition-opacity duration-300 ${
-            iframeReady ? "opacity-100 relative" : "opacity-0 absolute inset-0 w-full h-full"
-          }`}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      )}
-
-      {!loadHd && (
-        <div className="flex flex-col items-center gap-3 py-6">
-          <p className="text-white/70 text-xs text-center max-w-xs">
-            Video may take a moment on Google Drive. Tap below when you are on Wi‑Fi or ready for HD.
-          </p>
-          <button
-            type="button"
-            onClick={() => setLoadHd(true)}
-            className="px-5 py-2.5 rounded-full bg-white/15 text-white text-sm font-medium hover:bg-white/25 transition-colors"
-          >
-            Play HD video
-          </button>
-        </div>
-      )}
-
-      {loadHd && !iframeReady && (
-        <p className="absolute bottom-2 left-0 right-0 text-center text-white/50 text-[11px] pointer-events-none">
-          Loading player…
-        </p>
-      )}
-
-      {isFull && (
-        <p className="mt-2 text-center text-white/45 text-[10px]">
-          {playbackQualityLabel(deferHd && !iframeReady)}
-          {durationSec > 0 ? ` · ${Math.round(durationSec)}s` : ""}
-        </p>
-      )}
-    </div>
+    <GuestMomentFullVideo
+      sources={activeSources}
+      poster={posterSrc}
+      mimeType={item.mimeType}
+      isMobile={isMobile}
+      onAllSourcesFailed={() => {
+        if (!nativeSupported) {
+          setPlaybackMode("iframe");
+          return;
+        }
+        if (isMobile) setPlaybackMode("fallback");
+        else setPlaybackMode("iframe");
+      }}
+    />
   );
 }

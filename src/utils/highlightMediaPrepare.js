@@ -1,9 +1,12 @@
-/** Story-style limits (similar to IG/FB stories). */
-export const STORY_MAX_DURATION_SEC = 60;
-export const STORY_MAX_WIDTH = 720;
-export const STORY_MAX_HEIGHT = 1280;
-export const STORY_TARGET_VIDEO_BITS = 1_200_000;
-export const STORY_MAX_INPUT_MB = 120;
+/** Story-style limits — short clips for fast upload & playback. */
+export const STORY_MAX_DURATION_SEC = 30;
+/** Max dimensions before re-encode (1080×1920 vertical). */
+export const STORY_MAX_WIDTH = 1080;
+export const STORY_MAX_HEIGHT = 1920;
+/** Upload original when within duration + size (clearest quality). */
+export const STORY_MAX_ORIGINAL_MB = 40;
+export const STORY_TARGET_VIDEO_BITS = 2_800_000;
+export const STORY_MAX_INPUT_MB = 80;
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -64,7 +67,7 @@ async function seekVideo(video, time) {
 export async function captureVideoThumbnail(video, atSec = 0.5) {
   const t = Math.min(Math.max(0, atSec), Math.max(0, (video.duration || 1) - 0.05));
   await seekVideo(video, t);
-  const maxW = 480;
+  const maxW = 720;
   const scale = Math.min(1, maxW / (video.videoWidth || maxW));
   const w = Math.max(1, Math.round((video.videoWidth || maxW) * scale));
   const h = Math.max(1, Math.round((video.videoHeight || maxW) * scale));
@@ -110,10 +113,22 @@ async function transcodeStoryVideo(file, onProgress) {
     reportPrepare(onProgress, 12, "Creating thumbnail…");
     const thumbFile = await captureVideoThumbnail(video, Math.min(0.6, clipDuration * 0.15));
 
-    if (typeof MediaRecorder === "undefined") {
+    const withinOriginalLimits =
+      file.size <= STORY_MAX_ORIGINAL_MB * 1024 * 1024 &&
+      vw <= STORY_MAX_WIDTH &&
+      vh <= STORY_MAX_HEIGHT;
+
+    if (withinOriginalLimits || typeof MediaRecorder === "undefined") {
       if (file.size > STORY_MAX_INPUT_MB * 1024 * 1024) {
         throw new Error(`Video is too large (max ~${STORY_MAX_INPUT_MB} MB on this device).`);
       }
+      reportPrepare(onProgress, 48, "Ready to upload");
+      return { file, thumbFile, durationSec: clipDuration, mimeType: file.type || "video/mp4" };
+    }
+
+    // Keep phone MP4/MOV as-is — avoids WebM which iOS Safari cannot play natively.
+    const isPhoneVideo = /^video\/(mp4|quicktime|3gpp)/i.test(file.type || "");
+    if (isPhoneVideo && file.size <= STORY_MAX_INPUT_MB * 1024 * 1024) {
       reportPrepare(onProgress, 48, "Ready to upload");
       return { file, thumbFile, durationSec: clipDuration, mimeType: file.type || "video/mp4" };
     }
@@ -233,5 +248,5 @@ export async function prepareHighlightFile(file, onProgress) {
 }
 
 export function storyHintText() {
-  return `Photos any size · Videos up to ${STORY_MAX_DURATION_SEC}s (story-style), auto-resized`;
+  return `Photos any size · Videos up to ${STORY_MAX_DURATION_SEC}s`;
 }

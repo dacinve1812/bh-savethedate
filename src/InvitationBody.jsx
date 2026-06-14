@@ -14,8 +14,10 @@ import MediaViewer from "./components/MediaViewer";
 import {
   buildGalleryHash,
   DEFAULT_GALLERY_CATEGORY,
+  DEFAULT_PHOTOBOOTH_SUB_ALBUM,
   parseGalleryHash,
 } from "./utils/galleryHash";
+import { GUEST_MOMENTS_CATEGORY_ID } from "./galleryCategories";
 import { getCategoryImages, getStoredOrder } from "./hooks/useGalleryCategoryImages";
 
 export default function InvitationBody({
@@ -38,8 +40,16 @@ export default function InvitationBody({
     const parsed = parseGalleryHash(window.location.hash.slice(1));
     return parsed?.category ?? DEFAULT_GALLERY_CATEGORY;
   });
-  const galleryImages = useGalleryCategoryImages(galleryCategory);
+  const [photoboothSubAlbum, setPhotoboothSubAlbum] = React.useState(() => {
+    const parsed = parseGalleryHash(window.location.hash.slice(1));
+    return parsed?.subAlbum ?? DEFAULT_PHOTOBOOTH_SUB_ALBUM;
+  });
+  const galleryImages = useGalleryCategoryImages(
+    galleryCategory,
+    galleryCategory === "photobooth" ? photoboothSubAlbum : null
+  );
   const [scrollToIndex, setScrollToIndex] = React.useState(null);
+  const pendingHashRef = React.useRef(null);
   const lightboxIndex =
     lightbox == null
       ? null
@@ -51,22 +61,45 @@ export default function InvitationBody({
 
   const handleGalleryCategoryChange = React.useCallback((categoryId) => {
     setGalleryCategory(categoryId);
+    if (categoryId === "photobooth") {
+      setPhotoboothSubAlbum(DEFAULT_PHOTOBOOTH_SUB_ALBUM);
+    }
+    if (categoryId === GUEST_MOMENTS_CATEGORY_ID) {
+      onLightbox(null);
+    }
     setScrollToIndex(null);
     if (lightboxIndex == null) {
-      window.location.hash = `#${buildGalleryHash({ category: categoryId })}`;
+      window.location.hash = `#${buildGalleryHash({
+        category: categoryId,
+        subAlbum: categoryId === "photobooth" ? DEFAULT_PHOTOBOOTH_SUB_ALBUM : null,
+      })}`;
+    }
+  }, [lightboxIndex, onLightbox]);
+
+  const handlePhotoboothSubAlbumChange = React.useCallback((subAlbumId) => {
+    setPhotoboothSubAlbum(subAlbumId);
+    setScrollToIndex(null);
+    if (lightboxIndex == null) {
+      window.location.hash = `#${buildGalleryHash({
+        category: "photobooth",
+        subAlbum: subAlbumId,
+      })}`;
     }
   }, [lightboxIndex]);
 
   // Update URL hash for gallery album + optional lightbox photo
   React.useEffect(() => {
     if (tab === "gallery") {
-      if (lightboxIndex !== null && lightboxIndex !== undefined) {
-        window.location.hash = `#${buildGalleryHash({
-          category: galleryCategory,
-          photoIndex: lightboxIndex,
-        })}`;
-      } else {
-        window.location.hash = `#${buildGalleryHash({ category: galleryCategory })}`;
+      const nextHash = buildGalleryHash({
+        category: galleryCategory,
+        subAlbum: galleryCategory === "photobooth" ? photoboothSubAlbum : null,
+        photoIndex:
+          lightboxIndex !== null && lightboxIndex !== undefined ? lightboxIndex : null,
+      });
+      const current = window.location.hash.slice(1);
+      if (current !== nextHash) {
+        pendingHashRef.current = nextHash;
+        window.location.hash = `#${nextHash}`;
       }
       return;
     }
@@ -75,20 +108,34 @@ export default function InvitationBody({
     } else {
       window.location.hash = "";
     }
-  }, [tab, lightboxIndex, galleryCategory]);
+  }, [tab, lightboxIndex, galleryCategory, photoboothSubAlbum]);
 
   // Read hash on mount and on hashchange (deep link + back button)
   React.useEffect(() => {
     const applyHash = () => {
       const raw = window.location.hash.slice(1);
+      if (pendingHashRef.current === raw) {
+        pendingHashRef.current = null;
+        return;
+      }
       const parsed = parseGalleryHash(raw);
       if (parsed) {
         onTabChange("gallery");
         setGalleryCategory(parsed.category);
+        if (parsed.category === "photobooth") {
+          setPhotoboothSubAlbum(parsed.subAlbum ?? DEFAULT_PHOTOBOOTH_SUB_ALBUM);
+        }
         if (parsed.photoIndex != null) {
-          const count = getCategoryImages(parsed.category, getStoredOrder()).length;
+          const sub =
+            parsed.category === "photobooth"
+              ? parsed.subAlbum ?? DEFAULT_PHOTOBOOTH_SUB_ALBUM
+              : null;
+          const count = getCategoryImages(parsed.category, getStoredOrder(), sub).length;
           if (parsed.photoIndex < count) {
-            onLightbox(parsed.photoIndex);
+            onLightbox((prev) => {
+              if (typeof prev === "object" && prev?.index === parsed.photoIndex) return prev;
+              return parsed.photoIndex;
+            });
           } else {
             onLightbox(null);
           }
@@ -135,6 +182,8 @@ export default function InvitationBody({
               key="gallery"
               category={galleryCategory}
               onCategoryChange={handleGalleryCategoryChange}
+              subAlbum={galleryCategory === "photobooth" ? photoboothSubAlbum : undefined}
+              onSubAlbumChange={handlePhotoboothSubAlbumChange}
               images={galleryImages}
               scrollToIndex={scrollToIndex}
               onScrollToComplete={() => setScrollToIndex(null)}
@@ -151,20 +200,28 @@ export default function InvitationBody({
       </main>
 
       <AnimatePresence>
-        {lightboxIndex !== null && lightboxIndex !== undefined && (
+        {lightboxIndex !== null &&
+          lightboxIndex !== undefined &&
+          galleryCategory !== GUEST_MOMENTS_CATEGORY_ID && (
           <MediaViewer
-            key="media-viewer"
+            key={`media-viewer-${galleryCategory}-${photoboothSubAlbum ?? ""}`}
             initialIndex={lightboxIndex}
             originRect={lightboxOrigin?.rect ?? null}
             originSrc={lightboxOrigin?.src ?? null}
             images={galleryImages}
             categoryId={galleryCategory}
+            subAlbumId={galleryCategory === "photobooth" ? photoboothSubAlbum : null}
             onClose={() => {
               const idx = lightboxIndex;
               onLightbox(null);
               if (typeof idx === "number" && idx >= 0) setScrollToIndex(idx);
             }}
-            onIndexChange={(i) => onLightbox(i)}
+            onIndexChange={(i) => {
+              onLightbox((prev) => {
+                if (typeof prev === "object" && prev?.index === i) return prev;
+                return i;
+              });
+            }}
           />
         )}
       </AnimatePresence>

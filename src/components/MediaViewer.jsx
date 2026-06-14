@@ -80,7 +80,7 @@ function ViewerSlideImage({ image, slideIndex, shouldLoad, isLoaded, onLoaded, v
         alt={getGalleryImageAlt(image, slideIndex)}
         className="media-viewer-full"
         draggable={false}
-        loading="lazy"
+        loading={shouldLoad ? "eager" : "lazy"}
         referrerPolicy={embedProps.referrerPolicy}
         onLoad={handleLoad}
         onError={handleError}
@@ -102,10 +102,10 @@ export default function MediaViewer({
   onClose,
   onIndexChange,
   categoryId = "pre-wedding",
+  subAlbumId = null,
 }) {
   const hasOrigin = originRect && typeof originRect.left === "number" && originSrc;
   const [introPhase, setIntroPhase] = useState(hasOrigin ? "running" : "done");
-  // Dùng rect mặc định ngay (theo viewport) để ghost animate ngay, không chờ ảnh full load
   const [fullscreenRect, setFullscreenRect] = useState(() =>
     originRect && typeof originRect.left === "number" && originSrc
       ? getDefaultFullscreenRect()
@@ -154,6 +154,12 @@ export default function MediaViewer({
 
   // Intro: fallback – go to done if stuck
   useEffect(() => {
+    if (!hasOrigin && introPhase === "running") {
+      setIntroPhase("done");
+    }
+  }, [hasOrigin, introPhase]);
+
+  useEffect(() => {
     if (introPhase !== "running") return;
     const t = setTimeout(() => setIntroPhase("done"), INTRO_DURATION_MS + 800);
     return () => clearTimeout(t);
@@ -191,7 +197,9 @@ export default function MediaViewer({
   const total = images.length;
   const currentImage = images[index];
   const canZoom = fullResLoaded[index] === true;
-  const currentImageKey = currentImage ? getImageKey(currentImage, categoryId) : null;
+  const currentImageKey = currentImage
+    ? getImageKey(currentImage, categoryId, subAlbumId || "")
+    : null;
   void likesVersion;
   const liked = currentImageKey ? isImageLiked(currentImageKey) : false;
 

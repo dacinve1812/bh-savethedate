@@ -13,6 +13,8 @@ const OUT = path.join(ROOT, "src", "galleryDriveItems.generated.js");
 const FOLDERS = {
   "phong-su": "1kIn80ySGz2Rbq4JX2chgUwlyPTZfqUuV",
   "truyen-thong": "1AH_To1HH-WY6lVo1eVxm5K3kVqNV5rga",
+  photobooth: "1nd_b-gpdLvmeL-Hf1nxtXBqyfoyl6913",
+  "photobooth-single": "1QxV6nIVpZJqCnh-wORPvGmQ6D5edOZ9l",
 };
 
 function fetchText(url) {

@@ -11,6 +11,8 @@
  * 5. Copy the Web App URL into your site .env as:
  *    VITE_EVENT_HIGHLIGHTS_URL=https://script.google.com/macros/s/XXXX/exec
  * 6. Redeploy after edits (Manage deployments → New version).
+ *    Do NOT click Run on doGet/doPost in the editor — they need a web request (?action=list).
+ *    Use testList_() or testStream_() below to debug from the editor.
  *    Admin delete uses POST JSON: { "action":"delete", "fileId":"..." } (Drive file trashed, sheet row removed).
  * LIMITS: Very large videos may time out (Apps Script ~6 min max; payload limits apply).
  *         Client should send short story-style clips (see highlightMediaPrepare.js).
@@ -20,7 +22,8 @@ const HIGHLIGHTS_FOLDER_ID = "10Znzbfwxf8rg_tQzG6f2yaLMoPdEYmUT";
 const HIGHLIGHTS_SHEET_ID = "1G3B07S8l2VUueKUiM9ztwD-6rguaE10GB0N7053Lbg8";
 
 function doGet(e) {
-  const action = (e.parameter && e.parameter.action) || "";
+  const params = (e && e.parameter) || {};
+  const action = String(params.action || "");
   if (action === "list") {
     try {
       const items = listItemsFromSheet_();
@@ -29,12 +32,32 @@ function doGet(e) {
       return jsonOut_({ success: false, message: String(err) });
     }
   }
-  return ContentService.createTextOutput("Event Highlights API — use ?action=list").setMimeType(ContentService.MimeType.TEXT);
+  if (action === "stream") {
+    try {
+      const fileId = String(params.fileId || "").trim();
+      if (!fileId) throw new Error("Missing fileId");
+      const file = DriveApp.getFileById(fileId);
+      const mime = file.getMimeType() || "application/octet-stream";
+      // ContentService cannot serve raw binary; return verified public Drive URLs for <video src>.
+      return jsonOut_({
+        success: true,
+        mimeType: mime,
+        url: "https://drive.google.com/uc?export=download&id=" + encodeURIComponent(fileId),
+        viewUrl: "https://drive.google.com/uc?export=view&id=" + encodeURIComponent(fileId),
+        previewUrl: "https://drive.google.com/file/d/" + encodeURIComponent(fileId) + "/preview",
+      });
+    } catch (err) {
+      return jsonOut_({ success: false, message: String(err) });
+    }
+  }
+  return ContentService.createTextOutput("Event Highlights API — use ?action=list or ?action=stream&fileId=…").setMimeType(
+    ContentService.MimeType.TEXT
+  );
 }
 
 function doPost(e) {
   try {
-    const body = JSON.parse(e.postData.contents || "{}");
+    const body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
     if (body.action === "delete") {
       deleteHighlight_(body.fileId);
       return jsonOut_({ success: true });
@@ -174,4 +197,17 @@ function listItemsFromSheet_() {
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/** Run from editor to verify list action. */
+function testList_() {
+  const out = doGet({ parameter: { action: "list" } });
+  Logger.log(out.getContent());
+}
+
+/** Run from editor — paste a real fileId from the sheet. */
+function testStream_() {
+  const fileId = "PASTE_FILE_ID_HERE";
+  const out = doGet({ parameter: { action: "stream", fileId: fileId } });
+  Logger.log(out.getContent());
 }

@@ -48,8 +48,9 @@ export function isDriveImage(image) {
   return image?.source === "drive" || Boolean(image?.driveFileId) || String(image?.src || "").startsWith("drive://");
 }
 
-export function getImageKey(image, categoryId = "") {
+export function getImageKey(image, categoryId = "", subAlbumId = "") {
   const id = image?.driveFileId || parseDriveFileId(image?.src) || image?.src || "";
+  if (subAlbumId) return `${categoryId}/${subAlbumId}:${id}`;
   return `${categoryId}:${id}`;
 }
 

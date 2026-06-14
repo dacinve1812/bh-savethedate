@@ -3,7 +3,14 @@ import { motion } from "framer-motion";
 import { ImageIcon, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { useLanguage } from "./contexts/LanguageContext";
 import { translations } from "./translations";
-import { GALLERY_CATEGORY_IDS, GALLERY_CATEGORY_TITLES } from "./galleryCategories";
+import {
+  GALLERY_CATEGORY_TITLES,
+  GALLERY_SUBNAV_TAB_IDS,
+  GUEST_MOMENTS_CATEGORY_ID,
+  PHOTOBOOTH_SUB_ALBUM_IDS,
+  DEFAULT_PHOTOBOOTH_SUB_ALBUM,
+} from "./galleryCategories";
+import GuestMomentsPanel from "./components/GuestMomentsPanel";
 import { useGalleryCategoryImages } from "./hooks/useGalleryCategoryImages";
 import {
   resolveImagePaths,
@@ -22,30 +29,11 @@ import {
   toggleGalleryLike,
   countGalleryLikes,
 } from "./utils/galleryLikes";
+import { useMasonryRowSpan } from "./utils/masonryLayout";
 
 export { getOptimizedImagePaths, resolveImagePaths, getThumbnailSrc, getFullSizeSrc } from "./utils/galleryImageUtils";
 export { useEffectiveGalleryImages, useGalleryCategoryImages } from "./hooks/useGalleryCategoryImages";
 export { GALLERY_ORDER_STORAGE_KEY as STORAGE_KEY } from "./hooks/useGalleryCategoryImages";
-
-const MASONRY_ROW_HEIGHT_PX = 8;
-const MASONRY_COLUMN_COUNT = 3;
-const MASONRY_CONTAINER_MAX_PX = 1200;
-const DEFAULT_ASPECT_RATIO = 4 / 3;
-
-/** Estimate grid row span from column width + aspect ratio (avoids initial span 400 jump). */
-function estimateRowSpan(aspectRatio = DEFAULT_ASPECT_RATIO) {
-  if (typeof window === "undefined") return 20;
-  const viewportPadding = Math.min(window.innerWidth * 0.1, 64) * 2;
-  const containerW = Math.min(MASONRY_CONTAINER_MAX_PX, Math.max(320, window.innerWidth - viewportPadding));
-  const gapPx = parseFloat(
-    getComputedStyle(document.documentElement).fontSize || "16"
-  );
-  const gridGap = Math.max(12, Math.min(24, gapPx * 1.25));
-  const colW = (containerW - gridGap * (MASONRY_COLUMN_COUNT - 1)) / MASONRY_COLUMN_COUNT;
-  const h = colW / aspectRatio;
-  const unit = MASONRY_ROW_HEIGHT_PX + gridGap;
-  return Math.max(1, Math.ceil((h + gridGap) / unit));
-}
 
 function GalleryCategoryTitle({ categoryId }) {
   const titles = GALLERY_CATEGORY_TITLES[categoryId];
@@ -70,6 +58,7 @@ function GallerySubNav({
   onToggleLikedFilter,
   onShowAllPhotos,
   tabs,
+  showLikeFilter = true,
 }) {
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
@@ -144,6 +133,7 @@ function GallerySubNav({
             <span>{totalCount}</span>
           </span>
         )}
+        {showLikeFilter && (
         <button
           type="button"
           className={`gallery__stat-pill gallery__stat-pill--like ${showLikedOnly ? "gallery__stat-pill--filter-active" : ""}`}
@@ -154,6 +144,7 @@ function GallerySubNav({
           <Heart size={16} strokeWidth={1.75} fill={showLikedOnly ? "currentColor" : "none"} aria-hidden />
           <span>{likeCount}</span>
         </button>
+        )}
       </div>
       <div className="gallery__subnav-tabs-wrap">
         {canScrollLeft && (
@@ -210,6 +201,25 @@ function GallerySubNav({
   );
 }
 
+function GallerySubAlbumNav({ subAlbum, onSubAlbumChange, labels }) {
+  return (
+    <div className="gallery__subalbum-nav" role="tablist" aria-label="Photobooth albums">
+      {PHOTOBOOTH_SUB_ALBUM_IDS.map((id) => (
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          aria-selected={subAlbum === id}
+          className={`gallery__subalbum-tab ${subAlbum === id ? "gallery__subalbum-tab--active" : ""}`}
+          onClick={() => onSubAlbumChange(id)}
+        >
+          {labels?.[id] || id}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function GalleryItem({
   image,
   index,
@@ -227,8 +237,7 @@ function GalleryItem({
   itemRef,
 }) {
   const contentRef = useRef(null);
-  const [rowSpan, setRowSpan] = useState(() => estimateRowSpan());
-  const rafRef = useRef(null);
+  const { rowSpan, onImageMetrics } = useMasonryRowSpan(contentRef);
   const thumbFallbacksRef = useRef([]);
   const driveEmbedProps = getDriveImageEmbedProps(image);
 
@@ -241,53 +250,12 @@ function GalleryItem({
     }
   }, [image]);
 
-  const recalcSpan = useCallback(() => {
-    const wrapper = contentRef.current;
-    if (!wrapper) return;
-    const grid = wrapper.closest(".gallery__masonry");
-    const rowGapPx = grid ? parseFloat(getComputedStyle(grid).rowGap) || 0 : 0;
-    const h = wrapper.getBoundingClientRect().height;
-    if (h <= 0) return;
-    const unit = MASONRY_ROW_HEIGHT_PX + rowGapPx;
-    setRowSpan(Math.max(1, Math.ceil((h + rowGapPx) / unit)));
-  }, []);
-
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    const scheduleRecalc = () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = null;
-        recalcSpan();
-      });
-    };
-    const ro = new ResizeObserver(scheduleRecalc);
-    ro.observe(el);
-    scheduleRecalc();
-    const onResize = () => {
-      if (!el.style.aspectRatio) setRowSpan(estimateRowSpan());
-      scheduleRecalc();
-    };
-    window.addEventListener("resize", onResize);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      ro.disconnect();
-      window.removeEventListener("resize", onResize);
-    };
-  }, [recalcSpan]);
-
   const handleImageLoad = useCallback(
     (e) => {
       const img = e.target;
-      const wrapper = contentRef.current;
-      if (wrapper && img.naturalWidth > 0 && img.naturalHeight > 0) {
-        wrapper.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
-        requestAnimationFrame(() => recalcSpan());
-      }
-      onImageLoaded(imageKey);
+      onImageMetrics(img.naturalWidth, img.naturalHeight, () => onImageLoaded(imageKey));
     },
-    [imageKey, onImageLoaded, recalcSpan]
+    [imageKey, onImageLoaded, onImageMetrics]
   );
 
   const setImgRef = useCallback(
@@ -299,17 +267,10 @@ function GalleryItem({
         el.naturalWidth > 0 &&
         !isLoaded
       ) {
-        onImageLoaded(imageKey);
-        queueMicrotask(() => {
-          const w = contentRef.current;
-          if (w) {
-            w.style.aspectRatio = `${el.naturalWidth} / ${el.naturalHeight}`;
-            requestAnimationFrame(() => recalcSpan());
-          }
-        });
+        onImageMetrics(el.naturalWidth, el.naturalHeight, () => onImageLoaded(imageKey));
       }
     },
-    [imageKey, isLoaded, onImageLoaded, recalcSpan]
+    [imageKey, isLoaded, onImageLoaded, onImageMetrics]
   );
 
   const handleImageError = useCallback(
@@ -393,14 +354,25 @@ export default function Gallery({
   onScrollToComplete,
   category: controlledCategory,
   onCategoryChange,
+  subAlbum: controlledSubAlbum,
+  onSubAlbumChange,
   initialCategory = "pre-wedding",
 }) {
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
   const [internalCategory, setInternalCategory] = useState(initialCategory);
+  const [internalSubAlbum, setInternalSubAlbum] = useState(DEFAULT_PHOTOBOOTH_SUB_ALBUM);
   const category = controlledCategory ?? internalCategory;
   const setCategory = onCategoryChange ?? setInternalCategory;
-  const categoryImages = useGalleryCategoryImages(category);
+  const setSubAlbum = onSubAlbumChange ?? setInternalSubAlbum;
+  const photoboothSubAlbum =
+    category === "photobooth"
+      ? controlledSubAlbum ?? internalSubAlbum ?? DEFAULT_PHOTOBOOTH_SUB_ALBUM
+      : null;
+  const categoryImages = useGalleryCategoryImages(
+    category,
+    category === "photobooth" ? photoboothSubAlbum : null
+  );
   const list = imagesProp ?? categoryImages;
 
   const [likesVersion, setLikesVersion] = useState(0);
@@ -409,10 +381,12 @@ export default function Gallery({
   const [loadedThumbs, setLoadedThumbs] = useState({});
   const galleryRef = useRef(null);
   const itemRefs = useRef({});
+  const [guestMomentsCount, setGuestMomentsCount] = useState(0);
+  const isGuestMoments = category === GUEST_MOMENTS_CATEGORY_ID;
 
   const tabs = useMemo(
     () =>
-      GALLERY_CATEGORY_IDS.map((id) => ({
+      GALLERY_SUBNAV_TAB_IDS.map((id) => ({
         id,
         label: t.galleryCategoryLabels?.[id] || id,
       })),
@@ -420,8 +394,11 @@ export default function Gallery({
   );
 
   const imageKeys = useMemo(
-    () => list.map((img) => getImageKey(img, category)),
-    [list, category]
+    () =>
+      list.map((img) =>
+        getImageKey(img, category, category === "photobooth" ? photoboothSubAlbum : "")
+      ),
+    [list, category, photoboothSubAlbum]
   );
 
   const displayItems = useMemo(() => {
@@ -483,6 +460,16 @@ export default function Gallery({
 
   const handleCategoryChange = (id) => {
     setCategory(id);
+    if (id === "photobooth") {
+      setSubAlbum(DEFAULT_PHOTOBOOTH_SUB_ALBUM);
+    }
+    setShowLikedOnly(false);
+    setLoadedThumbs({});
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSubAlbumChange = (id) => {
+    setSubAlbum(id);
     setShowLikedOnly(false);
     setLoadedThumbs({});
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -504,13 +491,22 @@ export default function Gallery({
       <GallerySubNav
         category={category}
         onCategoryChange={handleCategoryChange}
-        totalCount={list.length}
+        totalCount={isGuestMoments ? guestMomentsCount : list.length}
         likeCount={likeCount}
         showLikedOnly={showLikedOnly}
         onToggleLikedFilter={handleToggleLikedFilter}
         onShowAllPhotos={() => setShowLikedOnly(false)}
         tabs={tabs}
+        showLikeFilter={!isGuestMoments}
       />
+
+      {category === "photobooth" && (
+        <GallerySubAlbumNav
+          subAlbum={photoboothSubAlbum}
+          onSubAlbumChange={handleSubAlbumChange}
+          labels={t.galleryPhotoboothSubLabels}
+        />
+      )}
 
       <motion.header
         className="gallery__header"
@@ -521,7 +517,9 @@ export default function Gallery({
         <GalleryCategoryTitle categoryId={category} />
       </motion.header>
 
-      {list.length === 0 ? (
+      {isGuestMoments ? (
+        <GuestMomentsPanel onItemsCountChange={setGuestMomentsCount} />
+      ) : list.length === 0 ? (
         <p className="gallery__empty">{t.galleryEmpty}</p>
       ) : displayItems.length === 0 ? (
         <p className="gallery__empty">{t.galleryEmptyLiked}</p>

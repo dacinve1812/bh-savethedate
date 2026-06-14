@@ -25,6 +25,13 @@ export const translations = {
       "phong-su": "Hình Phóng Sự",
       "truyen-thong": "Hình Truyền thống",
       photobooth: "Photobooth",
+      "guest-moments": "Guest Moments",
+    },
+    guestMomentsUploadTitle: "Upload your moment",
+    guestMomentsUploadHint: "Photos any size · Videos up to 30s",
+    galleryPhotoboothSubLabels: {
+      photobooth: "Photobooth",
+      single: "Single",
     },
     galleryCategoryTitles: {
       "pre-wedding": "Pre-wedding",
@@ -124,6 +131,13 @@ export const translations = {
       "phong-su": "Hình Phóng Sự",
       "truyen-thong": "Hình Truyền thống",
       photobooth: "Photobooth",
+      "guest-moments": "Khoảnh khắc từ khách mời",
+    },
+    guestMomentsUploadTitle: "Upload khoảnh khắc từ bạn",
+    guestMomentsUploadHint: "Ảnh mọi kích thước · Video tối đa 30 giây",
+    galleryPhotoboothSubLabels: {
+      photobooth: "Photobooth",
+      single: "Single",
     },
     galleryCategoryTitles: {
       "pre-wedding": "Pre-wedding",
